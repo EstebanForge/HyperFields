@@ -171,6 +171,18 @@ class Field
         return $this;
     }
 
+    public function setMultiple(bool $multiple = true): self
+    {
+        $this->multiple = $multiple;
+
+        return $this;
+    }
+
+    public function isMultiple(): bool
+    {
+        return $this->multiple;
+    }
+
     public function getType(): string
     {
         return $this->type;
@@ -350,6 +362,7 @@ class Field
             'conditional_logic' => $this->conditional_logic,
             'context' => $this->context,
             'storage_type' => $this->storage_type,
+            'multiple' => $this->multiple,
             'html_content' => $this->html_content,
             'post_type' => $this->post_type,
             'taxonomy' => $this->taxonomy,
