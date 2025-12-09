@@ -478,7 +478,7 @@ class Field
     private function sanitizeMapValue(mixed $value): array
     {
         if (!is_array($value)) {
-            return ['lat' => 0, 'lng' => 0];
+            return ['lat' => 0, 'lng' => 0, 'address' => ''];
         }
 
         return [
