@@ -1,0 +1,15 @@
+# Auto-detect text files and normalize line endings
+* text=auto
+
+# Exclude dev files from git archive/export (GitHub releases, composer dist)
+/.editorconfig export-ignore
+/.gitattributes export-ignore
+/AGENTS.md export-ignore
+/CLAUDE.md export-ignore
+/phpunit.xml export-ignore
+
+# Exclude dev directories
+/tests/ export-ignore
+/scripts/ export-ignore
+/hyperfields/ export-ignore
+/hyperoptions/ export-ignore
