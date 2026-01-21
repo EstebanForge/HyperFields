@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<coverage generated="1769014237">
-  <project timestamp="1769014237" name="Clover Coverage">
+<coverage generated="1769020283">
+  <project timestamp="1769020283" name="Clover Coverage">
     <package name="HyperFields\Admin">
       <file name="/Users/esteban/Dev/Projects-ActitudStudio/docker-wp-hyperpress/src/app/plugins/HyperFields/src/Admin/Activation.php">
         <class name="HyperFields\Admin\Activation" namespace="HyperFields\Admin">
