@@ -9,6 +9,7 @@
 /phpunit.xml export-ignore
 
 # Exclude dev directories
+/.githooks/ export-ignore
 /tests/ export-ignore
 /scripts/ export-ignore
 /hyperfields/ export-ignore

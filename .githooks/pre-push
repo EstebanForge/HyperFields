@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+#
+# Pre-push hook: Prevents pushing tags if dev dependencies are present
+# Install: composer setup-hooks
+#
+
+set -euo pipefail
+
+# Read pushed refs from stdin
+while read -r local_ref local_sha remote_ref remote_sha; do
+    # Check if pushing a tag (refs/tags/*)
+    if [[ "$remote_ref" == refs/tags/* ]]; then
+        TAG_NAME="${remote_ref#refs/tags/}"
+
+        echo ""
+        echo "┌─────────────────────────────────────┐"
+        echo "│  Pre-push check for tag: $TAG_NAME"
+        echo "└─────────────────────────────────────┘"
+        echo ""
+
+        # Check for dev dependencies in vendor/
+        DEV_DEPS_FOUND=0
+        DEV_PACKAGES=("phpunit" "brain" "mockery")
+
+        for pkg in "${DEV_PACKAGES[@]}"; do
+            if [[ -d "vendor/$pkg" ]]; then
+                echo "  ✗ Dev dependency found: vendor/$pkg"
+                DEV_DEPS_FOUND=1
+            fi
+        done
+
+        # Also check vendor/bin/phpunit as indicator
+        if [[ -f "vendor/bin/phpunit" ]]; then
+            echo "  ✗ Dev binary found: vendor/bin/phpunit"
+            DEV_DEPS_FOUND=1
+        fi
+
+        if [[ $DEV_DEPS_FOUND -eq 1 ]]; then
+            echo ""
+            echo "  ┌─────────────────────────────────────────────┐"
+            echo "  │  ERROR: Dev dependencies detected!          │"
+            echo "  │                                             │"
+            echo "  │  Run 'composer production' before tagging.  │"
+            echo "  └─────────────────────────────────────────────┘"
+            echo ""
+            exit 1
+        fi
+
+        echo "  ✓ No dev dependencies found"
+        echo "  ✓ Tag $TAG_NAME ready for push"
+        echo ""
+    fi
+done
+
+exit 0

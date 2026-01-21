@@ -48,7 +48,8 @@
         "test:summary:xdebug": "XDEBUG_MODE=coverage vendor/bin/phpunit --configuration phpunit.xml --coverage-text",
         "test:clover:xdebug": "XDEBUG_MODE=coverage vendor/bin/phpunit --configuration phpunit.xml --coverage-clover coverage-xdebug.xml",
         "production": "composer install --no-dev --optimize-autoloader",
-        "version-bump": "bash scripts/version-bump.sh"
+        "version-bump": "bash scripts/version-bump.sh",
+        "setup-hooks": "cp .githooks/* .git/hooks/ && chmod +x .git/hooks/* && echo 'Git hooks installed to .git/hooks/'"
     },
 
     "config": {
