@@ -25,7 +25,7 @@ if (!function_exists('hyperfields_run_initialization_logic')) {
      * @since 1.0.0
      *
      * @param string $plugin_file_path Absolute path to the main plugin file (hyperfields.php) or bootstrap.php.
-     * @param string $plugin_version   Semantic version string (e.g., '1.0.6').
+     * @param string $plugin_version   Semantic version string (e.g., '1.0.0').
      *
      * @return void
      */
@@ -158,11 +158,11 @@ if (!function_exists('hyperfields_register_candidate_for_tests')) {
             }
         }
 
-        $current_version = '1.0.6';
+        $current_version = '1.0.0';
         $current_path = null;
         if ($plugin_file_path && file_exists($plugin_file_path)) {
             $data = get_file_data($plugin_file_path, ['Version' => 'Version'], false);
-            $current_version = $data['Version'] ?? '1.0.6';
+            $current_version = $data['Version'] ?? '1.0.0';
             $current_path = realpath($plugin_file_path) ?: $plugin_file_path;
         } else {
             $composer_json_path = __DIR__ . '/composer.json';
@@ -224,7 +224,7 @@ foreach ($plugin_file_candidates as $candidate) {
         break;
     }
 }
-$current_hyperfields_instance_version = '1.0.6';
+$current_hyperfields_instance_version = '1.0.0';
 $current_hyperfields_instance_path = null;
 
 // Check if we're running as a plugin (one of the entry files exists) or as a library
@@ -232,20 +232,20 @@ if ($plugin_file_path && file_exists($plugin_file_path)) {
     // Plugin mode: read version from the main plugin file
     if (function_exists('get_file_data')) {
         $hyperfields_plugin_data = get_file_data($plugin_file_path, ['Version' => 'Version'], false);
-        $current_hyperfields_instance_version = $hyperfields_plugin_data['Version'] ?? '1.0.6';
+        $current_hyperfields_instance_version = $hyperfields_plugin_data['Version'] ?? '1.0.0';
     } else {
         // Fallback: Try composer.json first
         $composer_json_path = __DIR__ . '/composer.json';
         if (file_exists($composer_json_path)) {
             $composer_data = json_decode(file_get_contents($composer_json_path), true);
-            $current_hyperfields_instance_version = $composer_data['version'] ?? '1.0.6';
+            $current_hyperfields_instance_version = $composer_data['version'] ?? '1.0.0';
         } else {
             // Fallback: Regex parse the plugin file
             $plugin_content = file_get_contents($plugin_file_path, false, null, 0, 8192);
             if ($plugin_content && preg_match('/^[ \t\/*#@]*Version:\s*(.*)$/mi', $plugin_content, $matches)) {
                 $current_hyperfields_instance_version = trim($matches[1]);
             } else {
-                $current_hyperfields_instance_version = '1.0.6';
+                $current_hyperfields_instance_version = '1.0.0';
             }
         }
     }
