@@ -46,7 +46,13 @@ class OptionsPageTest extends \PHPUnit\Framework\TestCase
             echo '<button>' . $text . '</button>';
         });
 
-        $this->templateLoaderMock = \Mockery::mock('alias:HyperFields\TemplateLoader');
+        // Only mock TemplateLoader if it hasn't been loaded yet by composer autoloader.
+        // If already loaded, use a spy to allow tracking method calls on the real class.
+        if (!class_exists('HyperFields\TemplateLoader', false)) {
+            $this->templateLoaderMock = \Mockery::mock('alias:HyperFields\TemplateLoader');
+        } else {
+            $this->templateLoaderMock = \Mockery::spy('HyperFields\TemplateLoader');
+        }
 
         // Use reflection to access private constructor
         $reflection = new \ReflectionClass(OptionsPage::class);

@@ -22,6 +22,7 @@ return array(
     'HyperFields\\Field' => $baseDir . '/src/Field.php',
     'HyperFields\\HeadingField' => $baseDir . '/src/HeadingField.php',
     'HyperFields\\HyperFields' => $baseDir . '/src/HyperFields.php',
+    'HyperFields\\LibraryBootstrap' => $baseDir . '/src/LibraryBootstrap.php',
     'HyperFields\\Log' => $baseDir . '/src/Log.php',
     'HyperFields\\OptionField' => $baseDir . '/src/OptionField.php',
     'HyperFields\\OptionsPage' => $baseDir . '/src/OptionsPage.php',

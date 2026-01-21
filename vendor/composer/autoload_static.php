@@ -43,6 +43,7 @@ class ComposerStaticInit0b1779e428d95f593360c4ae583abcbc
         'HyperFields\\Field' => __DIR__ . '/../..' . '/src/Field.php',
         'HyperFields\\HeadingField' => __DIR__ . '/../..' . '/src/HeadingField.php',
         'HyperFields\\HyperFields' => __DIR__ . '/../..' . '/src/HyperFields.php',
+        'HyperFields\\LibraryBootstrap' => __DIR__ . '/../..' . '/src/LibraryBootstrap.php',
         'HyperFields\\Log' => __DIR__ . '/../..' . '/src/Log.php',
         'HyperFields\\OptionField' => __DIR__ . '/../..' . '/src/OptionField.php',
         'HyperFields\\OptionsPage' => __DIR__ . '/../..' . '/src/OptionsPage.php',
