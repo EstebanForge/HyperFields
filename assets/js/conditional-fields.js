@@ -1,11 +1,15 @@
-/**
- * HyperFields Conditional Logic Handler
- *
- * Handles field-level visibility based on conditional_logic property.
- * Monitors form changes and shows/hides fields dynamically.
- */
+(function () {
+  if (window.HyperFieldsConditional) {
+    return;
+  }
 
-class HyperFieldsConditional {
+  /**
+   * HyperFields Conditional Logic Handler
+   *
+   * Handles field-level visibility based on conditional_logic property.
+   * Monitors form changes and shows/hides fields dynamically.
+   */
+  class HyperFieldsConditional {
   constructor() {
     this.fields = new Map();
     this.init();
@@ -274,7 +278,10 @@ class HyperFieldsConditional {
       element.classList.add("hyperpress-field-hidden");
     }
   }
-}
+  }
 
-// Initialize when DOM is ready
-new HyperFieldsConditional();
+  window.HyperFieldsConditional = HyperFieldsConditional;
+
+  // Initialize when DOM is ready
+  new HyperFieldsConditional();
+})();
