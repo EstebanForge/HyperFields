@@ -6,8 +6,7 @@ declare(strict_types=1);
  * Core plugin bootstrap file for HyperFields.
  *
  * This file is responsible for registering the plugin's hooks and initializing the autoloader.
- * It is designed to be loaded only once, regardless of whether the project is used as a standalone
- * plugin or as a library embedded in another project.
+ * It is designed to be loaded only once for library usage in host projects.
  *
  * @since 1.0.0
  */
@@ -16,15 +15,15 @@ declare(strict_types=1);
 // Tests that run in separate processes need these functions even when HYPERFIELDS_BOOTSTRAP_LOADED is set.
 if (!function_exists('hyperfields_run_initialization_logic')) {
     /**
-     * Initialize HyperFields with the given plugin file path and version.
+     * Initialize HyperFields with the given base file path and version.
      *
      * This function sets up all necessary constants, loads helper files, and initializes
-     * core systems (Registry, Assets, TemplateLoader). It supports both plugin mode
-     * (when installed as a WordPress plugin) and library mode (when used as a Composer dependency).
+     * core systems (Registry, Assets, TemplateLoader). It is designed for library usage
+     * (Composer or direct bootstrap include).
      *
      * @since 1.0.0
      *
-     * @param string $plugin_file_path Absolute path to the main plugin file (hyperfields.php) or bootstrap.php.
+     * @param string $plugin_file_path Absolute path to the bootstrap file.
      * @param string $plugin_version   Semantic version string (e.g., '1.0.0').
      *
      * @return void
@@ -40,33 +39,17 @@ if (!function_exists('hyperfields_run_initialization_logic')) {
         define('HYPERFIELDS_INSTANCE_LOADED_PATH', $plugin_file_path);
         define('HYPERFIELDS_VERSION', $plugin_version);
 
-        // Determine if we're in library mode vs plugin mode (support legacy entry file)
-        $basename = $plugin_file_path ? basename($plugin_file_path) : '';
-        $is_library_mode = !in_array($basename, ['hyperfields.php'], true);
+        // Library mode: use the directory containing the bootstrap file
+        $plugin_dir = dirname($plugin_file_path);
+        define('HYPERFIELDS_ABSPATH', trailingslashit($plugin_dir));
+        define('HYPERFIELDS_BASENAME', 'hyperfields/bootstrap.php');
+        $plugin_url = plugins_url('', $plugin_file_path);
+        define('HYPERFIELDS_PLUGIN_URL', trailingslashit($plugin_url));
+        define('HYPERFIELDS_PLUGIN_FILE', $plugin_file_path);
 
-        if ($is_library_mode) {
-            // Library mode: use the directory containing the bootstrap/plugin file
-            $plugin_dir = dirname($plugin_file_path);
-            define('HYPERFIELDS_ABSPATH', trailingslashit($plugin_dir));
-            define('HYPERFIELDS_BASENAME', 'hyperfields/bootstrap.php');
-            $plugin_url = plugins_url('', $plugin_file_path);
-            define('HYPERFIELDS_PLUGIN_URL', trailingslashit($plugin_url));
-            define('HYPERFIELDS_PLUGIN_FILE', $plugin_file_path);
-
-            // Load helpers after constants are defined.
-            require_once HYPERFIELDS_ABSPATH . 'includes/helpers.php';
-            require_once HYPERFIELDS_ABSPATH . 'includes/backward-compatibility.php';
-        } else {
-            // Plugin mode: use standard WordPress plugin functions
-            define('HYPERFIELDS_ABSPATH', plugin_dir_path($plugin_file_path));
-            define('HYPERFIELDS_BASENAME', plugin_basename($plugin_file_path));
-            define('HYPERFIELDS_PLUGIN_URL', plugin_dir_url($plugin_file_path));
-            define('HYPERFIELDS_PLUGIN_FILE', $plugin_file_path);
-
-            // Load helpers after constants are defined.
-            require_once HYPERFIELDS_ABSPATH . 'includes/helpers.php';
-            require_once HYPERFIELDS_ABSPATH . 'includes/backward-compatibility.php';
-        }
+        // Load helpers after constants are defined.
+        require_once HYPERFIELDS_ABSPATH . 'includes/helpers.php';
+        require_once HYPERFIELDS_ABSPATH . 'includes/backward-compatibility.php';
 
         if (!defined('HYPERPRESS_PLUGIN_URL')) {
             define('HYPERPRESS_PLUGIN_URL', HYPERFIELDS_PLUGIN_URL);
@@ -74,12 +57,6 @@ if (!function_exists('hyperfields_run_initialization_logic')) {
 
         if (!defined('HYPERPRESS_VERSION')) {
             define('HYPERPRESS_VERSION', $plugin_version);
-        }
-
-        // Only register activation/deactivation hooks in plugin mode
-        if (!$is_library_mode) {
-            register_activation_hook($plugin_file_path, ['HyperFields\Admin\Activation', 'activate']);
-            register_deactivation_hook($plugin_file_path, ['HyperFields\Admin\Activation', 'deactivate']);
         }
 
         // Initialize the fields system
@@ -105,7 +82,7 @@ if (!function_exists('hyperfields_select_and_load_latest')) {
     /**
      * Select and load the latest HyperFields version from registered candidates.
      *
-     * Multiple instances of HyperFields may be registered (e.g., standalone plugin + library).
+     * Multiple instances of HyperFields may be registered across dependencies.
      * This function selects the highest version candidate and initializes it, ensuring only
      * one active instance. Called via 'after_setup_theme' action hook.
      *
@@ -146,34 +123,16 @@ if (!function_exists('hyperfields_register_candidate_for_tests')) {
      */
     function hyperfields_register_candidate_for_tests(): void
     {
-        // Determine current instance path/version similarly to main bootstrap logic.
-        $plugin_file_candidates = [
-            __DIR__ . '/hyperfields.php',
-        ];
-        $plugin_file_path = null;
-        foreach ($plugin_file_candidates as $candidate) {
-            if (file_exists($candidate)) {
-                $plugin_file_path = $candidate;
-                break;
-            }
-        }
-
         $current_version = '1.0.0';
         $current_path = null;
-        if ($plugin_file_path && file_exists($plugin_file_path)) {
-            $data = get_file_data($plugin_file_path, ['Version' => 'Version'], false);
-            $current_version = $data['Version'] ?? '1.0.0';
-            $current_path = realpath($plugin_file_path) ?: $plugin_file_path;
-        } else {
-            $composer_json_path = __DIR__ . '/composer.json';
-            if (file_exists($composer_json_path)) {
-                $composer_data = json_decode(file_get_contents($composer_json_path), true);
-                if (is_array($composer_data) && isset($composer_data['version'])) {
-                    $current_version = (string) $composer_data['version'];
-                }
+        $composer_json_path = __DIR__ . '/composer.json';
+        if (file_exists($composer_json_path)) {
+            $composer_data = json_decode(file_get_contents($composer_json_path), true);
+            if (is_array($composer_data) && isset($composer_data['version'])) {
+                $current_version = (string) $composer_data['version'];
             }
-            $current_path = realpath(__FILE__) ?: __FILE__;
         }
+        $current_path = realpath(__FILE__) ?: __FILE__;
 
         if (!isset($GLOBALS['hyperfields_api_candidates']) || !is_array($GLOBALS['hyperfields_api_candidates'])) {
             $GLOBALS['hyperfields_api_candidates'] = [];
@@ -213,53 +172,17 @@ if (file_exists(__DIR__ . '/vendor/autoload.php')) {
 }
 
 // Get this instance's version and real path (resolving symlinks)
-// Support both legacy 'hyperfields.php' and current 'hyperfields.php' entry points
-$plugin_file_candidates = [
-    __DIR__ . '/hyperfields.php',
-];
-$plugin_file_path = null;
-foreach ($plugin_file_candidates as $candidate) {
-    if (file_exists($candidate)) {
-        $plugin_file_path = $candidate;
-        break;
-    }
-}
 $current_hyperfields_instance_version = '1.0.0';
 $current_hyperfields_instance_path = null;
 
-// Check if we're running as a plugin (one of the entry files exists) or as a library
-if ($plugin_file_path && file_exists($plugin_file_path)) {
-    // Plugin mode: read version from the main plugin file
-    if (function_exists('get_file_data')) {
-        $hyperfields_plugin_data = get_file_data($plugin_file_path, ['Version' => 'Version'], false);
-        $current_hyperfields_instance_version = $hyperfields_plugin_data['Version'] ?? '1.0.0';
-    } else {
-        // Fallback: Try composer.json first
-        $composer_json_path = __DIR__ . '/composer.json';
-        if (file_exists($composer_json_path)) {
-            $composer_data = json_decode(file_get_contents($composer_json_path), true);
-            $current_hyperfields_instance_version = $composer_data['version'] ?? '1.0.0';
-        } else {
-            // Fallback: Regex parse the plugin file
-            $plugin_content = file_get_contents($plugin_file_path, false, null, 0, 8192);
-            if ($plugin_content && preg_match('/^[ \t\/*#@]*Version:\s*(.*)$/mi', $plugin_content, $matches)) {
-                $current_hyperfields_instance_version = trim($matches[1]);
-            } else {
-                $current_hyperfields_instance_version = '1.0.0';
-            }
-        }
-    }
-    $current_hyperfields_instance_path = realpath($plugin_file_path);
-} else {
-    // Library mode: try to get version from composer.json or use a fallback
-    $composer_json_path = __DIR__ . '/composer.json';
-    if (file_exists($composer_json_path)) {
-        $composer_data = json_decode(file_get_contents($composer_json_path), true);
-        $current_hyperfields_instance_version = $composer_data['version'] ?? '1.0.0';
-    }
-    // Use bootstrap.php path as fallback for library mode
-    $current_hyperfields_instance_path = realpath(__FILE__);
+// Library mode: try to get version from composer.json or use a fallback
+$composer_json_path = __DIR__ . '/composer.json';
+if (file_exists($composer_json_path)) {
+    $composer_data = json_decode(file_get_contents($composer_json_path), true);
+    $current_hyperfields_instance_version = $composer_data['version'] ?? '1.0.0';
 }
+// Use bootstrap.php path as fallback for library mode
+$current_hyperfields_instance_path = realpath(__FILE__);
 
 // Ensure we have a valid path
 if ($current_hyperfields_instance_path === false) {

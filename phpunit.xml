@@ -29,7 +29,6 @@
         <exclude>
             <directory>src/templates</directory>
             <file>bootstrap.php</file>
-            <file>hyperfields.php</file>
         </exclude>
     </source>
 
