@@ -249,6 +249,49 @@ class HyperFieldsTest extends \PHPUnit\Framework\TestCase
         $this->assertTrue(true); // No exception means success
     }
 
+    public function testRegisterWPSettingsCompatibilityPage()
+    {
+        Functions\when('apply_filters')->alias(function ($hook, $value) {
+            return $value;
+        });
+        Functions\when('sanitize_key')->alias(function (string $value): string {
+            $value = strtolower($value);
+            $value = preg_replace('/[^a-z0-9_]/', '_', $value);
+
+            return $value ?: '';
+        });
+        Functions\when('wp_kses_post')->returnArg();
+        Functions\when('add_filter')->justReturn(true);
+        Functions\when('doing_filter')->justReturn(false);
+        Functions\when('register_setting')->justReturn(true);
+        Functions\when('add_settings_section')->justReturn(true);
+        Functions\when('add_settings_field')->justReturn(true);
+        Functions\when('add_submenu_page')->justReturn('hook_name');
+        Functions\when('add_menu_page')->justReturn('hook_name');
+        Functions\when('settings_fields')->justReturn('');
+        Functions\when('do_settings_fields')->justReturn('');
+        Functions\when('submit_button')->justReturn('');
+        Functions\when('get_the_ID')->justReturn(0);
+
+        $page = HyperFields::registerWPSettingsCompatibilityPage([
+            'title' => 'Compat',
+            'slug' => 'compat',
+            'option_name' => 'compat_options',
+            'tabs' => [
+                [
+                    'key' => 'general',
+                    'label' => 'General',
+                    'callback' => static function ($tab): void {
+                        $tab->add_section('Main', ['id' => 'main'])
+                            ->add_option('text', ['name' => 'site_name', 'label' => 'Site Name']);
+                    },
+                ],
+            ],
+        ]);
+
+        $this->assertInstanceOf(OptionsPage::class, $page);
+    }
+
     public function testRegisterOptionsPageWithFullConfig()
     {
         Functions\when('add_action')->justReturn(true);
