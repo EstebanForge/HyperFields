@@ -28,7 +28,9 @@ class ExportImportUITest extends \PHPUnit\Framework\TestCase
         Functions\when('sanitize_key')->returnArg();
         Functions\when('wp_unslash')->returnArg();
         Functions\when('esc_url')->returnArg();
-        Functions\when('remove_query_arg')->justReturn('http://example.com/admin');
+        Functions\when('admin_url')->returnArg();
+        Functions\when('wp_enqueue_style')->justReturn(null);
+        Functions\when('wp_enqueue_script')->justReturn(null);
         Functions\when('wp_json_encode')->alias(function ($data, $flags = 0) {
             return json_encode($data, $flags);
         });
@@ -221,5 +223,292 @@ class ExportImportUITest extends \PHPUnit\Framework\TestCase
 
         $this->assertStringContainsString('notice-error', $html);
         $this->assertStringContainsString('expired', $html);
+    }
+
+    public function testConfirmImportWithNoTransientKeyFallsBackToExpired(): void
+    {
+        // hf_transient_key not in POST → storedJson = false
+        $_POST = [
+            'hf_confirm_submit' => '1',
+            'hf_confirm_nonce'  => 'test_nonce',
+        ];
+
+        Functions\when('get_transient')->justReturn(false);
+
+        $html = ExportImportUI::render(options: ['my_option' => 'My Options']);
+
+        $this->assertStringContainsString('notice-error', $html);
+    }
+
+    public function testExportHandlingWithNoOptionsSelectedReturnsEmptyArray(): void
+    {
+        // hf_export_options key absent → $selectedNames = []
+        $_POST = [
+            'hf_export_submit' => '1',
+            'hf_export_nonce'  => 'test_nonce',
+            // intentionally no hf_export_options key
+        ];
+
+        $html = ExportImportUI::render(options: ['my_option' => 'My Options']);
+
+        $this->assertStringContainsString('Please select at least one', $html);
+    }
+
+    // -------------------------------------------------------------------------
+    // Preview upload via $_FILES
+    // -------------------------------------------------------------------------
+
+    /**
+     * Build a minimal $_FILES entry backed by a real temp file so is_uploaded_file
+     * cannot be called (we override it).  handlePreview is private so we drive it
+     * through render().
+     */
+    private function makeUploadedFile(string $content): array
+    {
+        $tmp = tempnam(sys_get_temp_dir(), 'hf_test_');
+        file_put_contents($tmp, $content);
+
+        return [
+            'tmp_name' => $tmp,
+            'name'     => 'test.json',
+            'type'     => 'application/json',
+            'size'     => strlen($content),
+            'error'    => UPLOAD_ERR_OK,
+        ];
+    }
+
+    public function testPreviewWithInvalidFileErrorReturnsError(): void
+    {
+        $_POST = [
+            'hf_preview_submit' => '1',
+            'hf_preview_nonce'  => 'test_nonce',
+        ];
+        $_FILES = [
+            'hf_import_file' => [
+                'tmp_name' => '',
+                'name'     => 'test.json',
+                'type'     => 'application/json',
+                'size'     => 0,
+                'error'    => UPLOAD_ERR_NO_FILE,
+            ],
+        ];
+
+        Functions\when('is_uploaded_file')->justReturn(false);
+
+        $html = ExportImportUI::render(options: ['my_option' => 'My Options']);
+
+        $this->assertStringContainsString('notice-error', $html);
+        $this->assertStringContainsString('No valid file', $html);
+    }
+
+    public function testPreviewWithOversizedFileReturnsError(): void
+    {
+        $file = $this->makeUploadedFile('{}');
+        $file['size'] = 3 * 1024 * 1024; // 3 MB — over limit
+
+        $_POST  = ['hf_preview_submit' => '1', 'hf_preview_nonce' => 'test_nonce'];
+        $_FILES = ['hf_import_file' => $file];
+
+        Functions\when('is_uploaded_file')->justReturn(true);
+
+        $html = ExportImportUI::render(options: ['my_option' => 'My Options']);
+
+        $this->assertStringContainsString('notice-error', $html);
+        $this->assertStringContainsString('2 MB', $html);
+
+        unlink($file['tmp_name']);
+    }
+
+    public function testPreviewWithInvalidJsonReturnsError(): void
+    {
+        $file = $this->makeUploadedFile('{not valid json}');
+
+        $_POST  = ['hf_preview_submit' => '1', 'hf_preview_nonce' => 'test_nonce'];
+        $_FILES = ['hf_import_file' => $file];
+
+        Functions\when('is_uploaded_file')->justReturn(true);
+
+        $html = ExportImportUI::render(options: ['my_option' => 'My Options']);
+
+        $this->assertStringContainsString('notice-error', $html);
+        $this->assertStringContainsString('Invalid JSON', $html);
+
+        unlink($file['tmp_name']);
+    }
+
+    public function testPreviewWithMissingOptionsKeyReturnsError(): void
+    {
+        $json = json_encode(['version' => '1.0', 'type' => 'hyperfields_export']);
+        $file = $this->makeUploadedFile((string) $json);
+
+        $_POST  = ['hf_preview_submit' => '1', 'hf_preview_nonce' => 'test_nonce'];
+        $_FILES = ['hf_import_file' => $file];
+
+        Functions\when('is_uploaded_file')->justReturn(true);
+
+        $html = ExportImportUI::render(options: ['my_option' => 'My Options']);
+
+        $this->assertStringContainsString('notice-error', $html);
+        $this->assertStringContainsString('valid HyperFields export', $html);
+
+        unlink($file['tmp_name']);
+    }
+
+    public function testPreviewWithNoAllowedOptionsReturnsError(): void
+    {
+        $json = json_encode([
+            'version' => '1.0',
+            'type'    => 'hyperfields_export',
+            'options' => ['blocked_option' => ['k' => 'v']],
+        ]);
+        $file = $this->makeUploadedFile((string) $json);
+
+        $_POST  = ['hf_preview_submit' => '1', 'hf_preview_nonce' => 'test_nonce'];
+        $_FILES = ['hf_import_file' => $file];
+
+        Functions\when('is_uploaded_file')->justReturn(true);
+
+        $html = ExportImportUI::render(
+            options: ['allowed_option' => 'Allowed'],
+            allowedImportOptions: ['allowed_option'],
+        );
+
+        $this->assertStringContainsString('notice-error', $html);
+        $this->assertStringContainsString('No importable options', $html);
+
+        unlink($file['tmp_name']);
+    }
+
+    public function testPreviewSuccessShowsDiffSection(): void
+    {
+        $json = json_encode([
+            'version' => '1.0',
+            'type'    => 'hyperfields_export',
+            'options' => ['my_option' => ['field_a' => 'value_a']],
+        ]);
+        $file = $this->makeUploadedFile((string) $json);
+
+        $_POST  = ['hf_preview_submit' => '1', 'hf_preview_nonce' => 'test_nonce'];
+        $_FILES = ['hf_import_file' => $file];
+
+        Functions\when('is_uploaded_file')->justReturn(true);
+        Functions\when('get_option')->justReturn(['existing_key' => 'existing_val']);
+        Functions\when('set_transient')->justReturn(true);
+
+        $html = ExportImportUI::render(
+            options: ['my_option' => 'My Options'],
+            allowedImportOptions: ['my_option'],
+        );
+
+        $this->assertStringContainsString('hf_confirm_submit', $html);
+        $this->assertStringContainsString('hf-diff-container', $html);
+        $this->assertStringContainsString('hyperpress-options-wrap', $html);
+
+        unlink($file['tmp_name']);
+    }
+
+    public function testPreviewWithEmptyFileReturnsError(): void
+    {
+        // An empty file causes the "Could not read" branch (empty string check).
+        $file = $this->makeUploadedFile(''); // zero-byte file
+
+        $_POST  = ['hf_preview_submit' => '1', 'hf_preview_nonce' => 'test_nonce'];
+        $_FILES = ['hf_import_file' => $file];
+
+        Functions\when('is_uploaded_file')->justReturn(true);
+
+        $html = ExportImportUI::render(options: ['my_option' => 'My Options']);
+
+        $this->assertStringContainsString('notice-error', $html);
+        $this->assertStringContainsString('Could not read', $html);
+
+        unlink($file['tmp_name']);
+    }
+
+    public function testPreviewSkipsNonArrayOptionValuesInPayload(): void
+    {
+        // Payload has a non-array value for one option → it's skipped silently,
+        // but a valid option in the same payload still produces a successful preview.
+        $json = json_encode([
+            'version' => '1.0',
+            'type'    => 'hyperfields_export',
+            'options' => [
+                'my_option'  => ['field_a' => 'val'],
+                'bad_option' => 'scalar',
+            ],
+        ]);
+        $file = $this->makeUploadedFile((string) $json);
+
+        $_POST  = ['hf_preview_submit' => '1', 'hf_preview_nonce' => 'test_nonce'];
+        $_FILES = ['hf_import_file' => $file];
+
+        Functions\when('is_uploaded_file')->justReturn(true);
+        Functions\when('get_option')->justReturn([]);
+        Functions\when('set_transient')->justReturn(true);
+
+        $html = ExportImportUI::render(
+            options: ['my_option' => 'My Options', 'bad_option' => 'Bad'],
+            allowedImportOptions: ['my_option', 'bad_option'],
+        );
+
+        $this->assertStringContainsString('hf-diff-container', $html);
+        $this->assertStringContainsString('hf_confirm_submit', $html);
+
+        unlink($file['tmp_name']);
+    }
+
+    public function testPreviewAppliesPrefixFilterToIncomingValues(): void
+    {
+        $json = json_encode([
+            'version' => '1.0',
+            'type'    => 'hyperfields_export',
+            'options' => [
+                'my_option' => [
+                    'myp_field' => 'kept',
+                    'other_key' => 'dropped',
+                ],
+            ],
+        ]);
+        $file = $this->makeUploadedFile((string) $json);
+
+        $_POST  = ['hf_preview_submit' => '1', 'hf_preview_nonce' => 'test_nonce'];
+        $_FILES = ['hf_import_file' => $file];
+
+        Functions\when('is_uploaded_file')->justReturn(true);
+        Functions\when('get_option')->justReturn([]);
+        Functions\when('set_transient')->justReturn(true);
+
+        $html = ExportImportUI::render(
+            options: ['my_option' => 'My Options'],
+            allowedImportOptions: ['my_option'],
+            prefix: 'myp_',
+        );
+
+        $this->assertStringContainsString('hf-diff-container', $html);
+        $this->assertStringContainsString('myp_field', $html);
+        $this->assertStringNotContainsString('other_key', $html);
+
+        unlink($file['tmp_name']);
+    }
+
+    public function testEnqueuePageAssetsCallsEnqueueFunctions(): void
+    {
+        // enqueuePageAssets() is the correct hook target — verify it calls wp_enqueue_*.
+        // TemplateLoader::enqueueAssets() bails when HYPERFIELDS_PLUGIN_URL is undefined,
+        // so only the jsondiffpatch calls are observable here.
+        $styleEnqueued  = false;
+        $scriptEnqueued = false;
+
+        Functions\when('wp_enqueue_style')->alias(function () use (&$styleEnqueued) {
+            $styleEnqueued = true;
+        });
+        Functions\when('wp_enqueue_script')->alias(function () use (&$scriptEnqueued) {
+            $scriptEnqueued = true;
+        });
+
+        ExportImportUI::enqueuePageAssets();
+
+        $this->assertTrue($styleEnqueued, 'jsondiffpatch CSS should be enqueued');
+        $this->assertTrue($scriptEnqueued, 'jsondiffpatch JS should be enqueued');
     }
 }

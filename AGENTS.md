@@ -38,18 +38,20 @@ composer update --no-dev --optimize-autoloader   # Production update
 ### Directory Structure
 ```
 src/                    # PSR-4 autoloaded as HyperFields\
-  Admin/               # Activation, options pages, migrations
+  Admin/               # Activation, options pages, migrations, export/import UI
+    ExportImportUI.php # Admin submenu page for Export / Import
   Container/           # Field containers (PostMeta, TermMeta, UserMeta, Options)
   Templates/           # Field UI templates
   Assets.php          # Asset management
   BlockFieldAdapter.php  # Gutenberg integration
   ConditionalLogic.php   # Field visibility logic
+  ExportImport.php    # Export / Import core logic
   Field.php           # Base field class
   HyperFields.php     # Main API class
   Registry.php        # Field registration
   TemplateLoader.php  # Template rendering system
 includes/
-  helpers.php         # Helper functions
+  helpers.php         # Helper functions (hf_* prefix)
   backward-compatibility.php  # Legacy class aliases
 bootstrap.php         # Bootstrap logic (version resolution, initialization)
 ```
@@ -79,6 +81,17 @@ HyperFields::getOptions('option_name', []);
 - `TermMetaContainer` - Term meta fields
 - `UserMetaContainer` - User meta fields
 - Options stored via `HyperFields::registerOptionsPage()`
+
+**HyperFields\ExportImport**: Core export / import logic
+- `exportOptions(array $optionNames, string $prefix = ''): string` — JSON export
+- `importOptions(string $json, array $allowedOptionNames = [], string $prefix = ''): array` — JSON import with backup
+- `restoreBackup(string $backupKey, string $optionName): bool` — restore from transient backup
+- `snapshotOptions(array $optionNames, string $prefix = ''): string` — snapshot current data (used by import preview)
+
+**HyperFields\Admin\ExportImportUI**: Admin page for visual Export / Import
+- `registerPage(...)` — registers the submenu page and hooks assets to `admin_enqueue_scripts`; recommended entry point for third-party plugins
+- `enqueuePageAssets(string $hook, string $expectedHook)` — public asset enqueue method hooked to `admin_enqueue_scripts`
+- `render(array $config)` — renders the full page (called by WordPress menu callback)
 
 ### Field Types
 
@@ -146,13 +159,72 @@ HyperFields uses a version resolution system that allows multiple instances to c
 When HyperFields is used as a Composer dependency:
 
 **What to use:**
-- `HyperFields\HyperFields` - For options pages
+- `HyperFields\HyperFields` - For options pages and the `registerDataToolsPage()` facade
 - `HyperFields\BlockFieldAdapter` - For block integration
 - `HyperFields\Field` - For field definitions
 - `HyperFields\Container\*` - For meta field containers
+- `HyperFields\ExportImport` - For programmatic export / import
+- `HyperFields\Admin\ExportImportUI` - For registering a Data Tools admin page
 
 **What NOT to use:**
 - `HyperFields\TemplateLoader` - Internal to HyperFields, auto-initialized
+
+## Export / Import System
+
+HyperFields ships a built-in Export / Import system for WordPress option groups.
+
+### Registering a Data Tools page (recommended for third-party plugins)
+
+Call inside `admin_menu`. One call handles menu registration, asset enqueueing, and rendering:
+
+```php
+add_action('admin_menu', function () {
+    HyperFields\HyperFields::registerDataToolsPage(
+        parentSlug: 'my-plugin',
+        pageSlug:   'my-plugin-data-tools',
+        options:    ['my_plugin_options' => 'My Plugin Settings'],
+        allowedImportOptions: ['my_plugin_options'],
+        prefix:     'myp_',
+        title:      'Data Tools',
+    );
+});
+```
+
+Or using the procedural helper:
+
+```php
+add_action('admin_menu', function () {
+    hf_register_data_tools_page(
+        parentSlug: 'my-plugin',
+        pageSlug:   'my-plugin-data-tools',
+        options:    ['my_plugin_options' => 'My Plugin Settings'],
+    );
+});
+```
+
+### Programmatic API (no UI)
+
+```php
+// Export to JSON
+$json = hf_export_options(['my_plugin_options'], 'myp_');
+
+// Import from JSON (returns ['success' => bool, 'message' => string, 'backup_keys' => [...]])
+$result = hf_import_options($json, ['my_plugin_options'], 'myp_');
+
+// Restore from backup if import went wrong
+if (!$result['success']) {
+    HyperFields\ExportImport::restoreBackup($result['backup_keys']['my_plugin_options'], 'my_plugin_options');
+}
+```
+
+### Key behaviours
+
+- Export skips non-array option values (scalar options are not supported).
+- Import is **additive**: existing keys not present in the payload are preserved.
+- When `allowedImportOptions` / `$prefix` filtering removes all incoming entries, `importOptions` returns `success: false`.
+- Before overwriting, `importOptions` stores a 1-hour transient backup; key returned in `backup_keys`.
+- `restoreBackup` deletes the transient after a successful or no-op restore.
+- `JSON_HEX_TAG | JSON_HEX_AMP` flags prevent XSS when the diff preview embeds JSON in `<script>` tags.
 
 ## Important Notes
 

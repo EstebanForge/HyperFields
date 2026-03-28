@@ -98,7 +98,8 @@ class ExportImportTest extends \PHPUnit\Framework\TestCase
         $json = ExportImport::exportOptions(['bad_option']);
         $data = json_decode($json, true);
 
-        $this->assertSame([], $data['options']['bad_option']);
+        // Non-array option values are silently skipped; the key must not appear in the output.
+        $this->assertArrayNotHasKey('bad_option', $data['options']);
     }
 
     public function testExportOptionsSkipsEmptyOptionName(): void
@@ -177,8 +178,8 @@ class ExportImportTest extends \PHPUnit\Framework\TestCase
 
         // blocked_option not in whitelist – update_option should NOT be called
         $this->assertFalse($updateCalled);
-        // Result is still success (no errors, just nothing to import)
-        $this->assertTrue($result['success']);
+        // Nothing was imported; result must be false so callers can surface the issue
+        $this->assertFalse($result['success']);
     }
 
     public function testImportOptionsWhitelistAllowing(): void
@@ -270,6 +271,7 @@ class ExportImportTest extends \PHPUnit\Framework\TestCase
     {
         $backup = ['key' => 'backup_value'];
         Functions\when('get_transient')->justReturn($backup);
+        Functions\when('get_option')->justReturn(['key' => 'current_value']);
         Functions\when('update_option')->justReturn(true);
         Functions\when('delete_transient')->justReturn(true);
 
@@ -312,5 +314,103 @@ class ExportImportTest extends \PHPUnit\Framework\TestCase
 
         $this->assertArrayHasKey('pre_key', $snapshot['opt1']);
         $this->assertArrayNotHasKey('other_key', $snapshot['opt1']);
+    }
+
+    public function testSnapshotOptionsSkipsEmptyName(): void
+    {
+        Functions\when('get_option')->justReturn(['k' => 'v']);
+
+        $snapshot = ExportImport::snapshotOptions(['', 'real_opt']);
+
+        $this->assertArrayNotHasKey('', $snapshot);
+        $this->assertArrayHasKey('real_opt', $snapshot);
+    }
+
+    public function testSnapshotOptionsNonArrayValueCoercedToEmpty(): void
+    {
+        Functions\when('get_option')->justReturn('scalar');
+
+        $snapshot = ExportImport::snapshotOptions(['opt1']);
+
+        $this->assertSame([], $snapshot['opt1']);
+    }
+
+    // -------------------------------------------------------------------------
+    // importOptions — edge-case branches
+    // -------------------------------------------------------------------------
+
+    public function testImportOptionsSkipsNonArrayIncomingValue(): void
+    {
+        // A scalar value inside options should add an error but not fail outright
+        // if another option succeeds.
+        Functions\when('get_option')->justReturn([]);
+        Functions\when('update_option')->justReturn(true);
+
+        $json = $this->makeExportJson([
+            'good_option' => ['key' => 'val'],
+            'bad_option'  => 'not_an_array',
+        ]);
+        $result = ExportImport::importOptions($json);
+
+        $this->assertTrue($result['success']);
+        $this->assertStringContainsString('bad_option', $result['message']);
+    }
+
+    public function testImportOptionsAllSkippedWithErrors(): void
+    {
+        // All incoming values are non-array; nothing imported, errors present.
+        $json   = $this->makeExportJson(['bad_opt' => 'scalar']);
+        $result = ExportImport::importOptions($json);
+
+        $this->assertFalse($result['success']);
+        $this->assertStringContainsString('bad_opt', $result['message']);
+    }
+
+    public function testImportOptionsPrefixFiltersOutAllIncomingKeys(): void
+    {
+        // Incoming has keys but none match the prefix → continue, nothing imported.
+        Functions\when('get_option')->justReturn([]);
+
+        $json   = $this->makeExportJson(['my_option' => ['other_key' => 'val']]);
+        $result = ExportImport::importOptions($json, [], 'myp_');
+
+        $this->assertFalse($result['success']);
+    }
+
+    public function testImportOptionsUnchangedValueCountsAsSuccess(): void
+    {
+        // update_option returns false because value is identical — should still succeed.
+        $data = ['key' => 'same_value'];
+        Functions\when('get_option')->justReturn($data);
+        Functions\when('update_option')->justReturn(false); // unchanged → false
+
+        $json   = $this->makeExportJson(['my_option' => $data]);
+        $result = ExportImport::importOptions($json);
+
+        $this->assertTrue($result['success']);
+    }
+
+    // -------------------------------------------------------------------------
+    // restoreBackup — unchanged value path
+    // -------------------------------------------------------------------------
+
+    public function testRestoreBackupSuccessWhenValueUnchanged(): void
+    {
+        // update_option returns false because backup value matches current value.
+        $backup = ['key' => 'same'];
+        Functions\when('get_transient')->justReturn($backup);
+        Functions\when('get_option')->justReturn($backup); // same value
+        Functions\when('update_option')->justReturn(false);
+
+        $deleteCalled = false;
+        Functions\when('delete_transient')->alias(function () use (&$deleteCalled) {
+            $deleteCalled = true;
+            return true;
+        });
+
+        $result = ExportImport::restoreBackup('hf_backup_abc', 'my_option');
+
+        $this->assertTrue($result, 'Restore should succeed when value is already current');
+        $this->assertTrue($deleteCalled, 'Transient must be deleted even when value is unchanged');
     }
 }

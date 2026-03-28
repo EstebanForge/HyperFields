@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use HyperFields\Admin\ExportImportUI;
+use HyperFields\ExportImport;
 use HyperFields\Field;
 use HyperFields\OptionsPage;
 use HyperFields\OptionsSection;
@@ -412,6 +414,68 @@ if (!function_exists('hp_create_repeater')) {
 if (!function_exists('hp_create_section')) {
     function hp_create_section(string $id, string $title): OptionsSection {
         return hf_section($id, $title);
+    }
+}
+
+if (!function_exists('hf_register_data_tools_page')) {
+    /**
+     * Register an Export / Import admin page as a submenu of an existing menu.
+     *
+     * Must be called from inside an `admin_menu` action hook.
+     *
+     * @param string $parentSlug           Parent menu slug (e.g. 'my-plugin').
+     * @param string $pageSlug             Unique slug for this page.
+     * @param array  $options              Associative map of WP option names to labels.
+     * @param array  $allowedImportOptions Whitelist of option names permitted on import. Defaults to all.
+     * @param string $prefix               Optional key prefix for both export and import.
+     * @param string $title                Page heading and menu label.
+     * @param string $capability           Required capability. Default: 'manage_options'.
+     */
+    function hf_register_data_tools_page(
+        string $parentSlug,
+        string $pageSlug,
+        array $options = [],
+        array $allowedImportOptions = [],
+        string $prefix = '',
+        string $title = 'Data Export / Import',
+        string $capability = 'manage_options'
+    ): void {
+        ExportImportUI::registerPage(
+            parentSlug:           $parentSlug,
+            pageSlug:             $pageSlug,
+            options:              $options,
+            allowedImportOptions: $allowedImportOptions,
+            prefix:               $prefix,
+            title:                $title,
+            capability:           $capability,
+        );
+    }
+}
+
+if (!function_exists('hf_export_options')) {
+    /**
+     * Export one or more WordPress option groups to a JSON string.
+     *
+     * @param array  $optionNames Option names to export.
+     * @param string $prefix      Only export keys starting with this prefix. Default '' exports all keys.
+     * @return string JSON string ready for download or storage.
+     */
+    function hf_export_options(array $optionNames, string $prefix = ''): string {
+        return ExportImport::exportOptions($optionNames, $prefix);
+    }
+}
+
+if (!function_exists('hf_import_options')) {
+    /**
+     * Import options from a previously exported JSON string.
+     *
+     * @param string $jsonString         JSON produced by hf_export_options().
+     * @param array  $allowedOptionNames Whitelist of option names that may be written. Empty = allow all.
+     * @param string $prefix             Only import keys starting with this prefix. Default '' imports all.
+     * @return array{success: bool, message: string, backup_keys?: array<string, string>}
+     */
+    function hf_import_options(string $jsonString, array $allowedOptionNames = [], string $prefix = ''): array {
+        return ExportImport::importOptions($jsonString, $allowedOptionNames, $prefix);
     }
 }
 

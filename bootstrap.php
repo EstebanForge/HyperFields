@@ -123,7 +123,7 @@ if (!function_exists('hyperfields_register_candidate_for_tests')) {
      */
     function hyperfields_register_candidate_for_tests(): void
     {
-        $current_version = '1.0.0';
+        $current_version = '1.1.0';
         $current_path = null;
         $composer_json_path = __DIR__ . '/composer.json';
         if (file_exists($composer_json_path)) {
@@ -172,14 +172,14 @@ if (file_exists(__DIR__ . '/vendor/autoload.php')) {
 }
 
 // Get this instance's version and real path (resolving symlinks)
-$current_hyperfields_instance_version = '1.0.0';
+$current_hyperfields_instance_version = '1.1.0';
 $current_hyperfields_instance_path = null;
 
 // Library mode: try to get version from composer.json or use a fallback
 $composer_json_path = __DIR__ . '/composer.json';
 if (file_exists($composer_json_path)) {
     $composer_data = json_decode(file_get_contents($composer_json_path), true);
-    $current_hyperfields_instance_version = $composer_data['version'] ?? '1.0.0';
+    $current_hyperfields_instance_version = $composer_data['version'] ?? '1.1.0';
 }
 // Use bootstrap.php path as fallback for library mode
 $current_hyperfields_instance_path = realpath(__FILE__);

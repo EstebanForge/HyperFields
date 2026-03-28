@@ -49,14 +49,15 @@ class ExportImport
 
             $value = get_option($optionName, []);
             if (!is_array($value)) {
-                $value = [];
+                // Non-array option values cannot be represented in the export format; skip silently.
+                continue;
             }
 
             // Apply prefix filter
             if ($prefix !== '') {
                 $value = array_filter(
                     $value,
-                    static fn(string $key): bool => strpos($key, $prefix) === 0,
+                    static fn($key): bool => strpos((string) $key, $prefix) === 0,
                     ARRAY_FILTER_USE_KEY
                 );
             }
@@ -64,14 +65,19 @@ class ExportImport
             $data[$optionName] = $value;
         }
 
-        return (string) wp_json_encode([
-            'version'     => self::SCHEMA_VERSION,
-            'type'        => 'hyperfields_export',
-            'prefix'      => $prefix,
-            'exported_at' => current_time('mysql'),
-            'site_url'    => get_site_url(),
-            'options'     => $data,
-        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        $encoded = wp_json_encode(
+            [
+                'version'     => self::SCHEMA_VERSION,
+                'type'        => 'hyperfields_export',
+                'prefix'      => $prefix,
+                'exported_at' => current_time('mysql'),
+                'site_url'    => get_site_url(),
+                'options'     => $data,
+            ],
+            JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE
+        );
+
+        return $encoded !== false ? $encoded : '{}';
     }
 
     /**
@@ -106,8 +112,9 @@ class ExportImport
             return ['success' => false, 'message' => 'Invalid export format. Expected a "options" key with an array value.'];
         }
 
-        $backupKeys = [];
-        $errors     = [];
+        $backupKeys    = [];
+        $errors        = [];
+        $importedCount = 0;
 
         foreach ($decoded['options'] as $optionName => $incoming) {
             $optionName = sanitize_text_field((string) $optionName);
@@ -126,7 +133,7 @@ class ExportImport
             if ($prefix !== '') {
                 $incoming = array_filter(
                     $incoming,
-                    static fn(string $key): bool => strpos($key, $prefix) === 0,
+                    static fn($key): bool => strpos((string) $key, $prefix) === 0,
                     ARRAY_FILTER_USE_KEY
                 );
             }
@@ -138,7 +145,7 @@ class ExportImport
             // Backup existing value using a transient so it auto-expires
             $existing = get_option($optionName, []);
             if (is_array($existing) && !empty($existing)) {
-                $backupKey             = 'hf_backup_' . sanitize_key($optionName) . '_' . time();
+                $backupKey               = 'hf_backup_' . sanitize_key($optionName) . '_' . time();
                 set_transient($backupKey, $existing, HOUR_IN_SECONDS);
                 $backupKeys[$optionName] = $backupKey;
             }
@@ -149,12 +156,19 @@ class ExportImport
                 $incoming
             );
 
-            if (update_option($optionName, $merged) === false && $existing === $merged) {
-                // update_option returns false when the value is unchanged – treat as success
+            // update_option returns false both on DB failure and when the value is unchanged.
+            // Count unchanged values as a successful import since the data matches intent.
+            $updated = update_option($optionName, $merged);
+            if ($updated || $existing === $merged) {
+                $importedCount++;
             }
         }
 
-        if (!empty($errors) && empty($backupKeys)) {
+        if ($importedCount === 0 && empty($errors)) {
+            return ['success' => false, 'message' => 'No options were imported. The whitelist or prefix filter may have excluded all entries.'];
+        }
+
+        if ($importedCount === 0) {
             return ['success' => false, 'message' => implode(' ', $errors)];
         }
 
@@ -185,12 +199,16 @@ class ExportImport
             return false;
         }
 
-        $restored = update_option(sanitize_text_field($optionName), $backup);
-        if ($restored) {
+        $existing  = get_option(sanitize_text_field($optionName));
+        $restored  = update_option(sanitize_text_field($optionName), $backup);
+        // update_option returns false both on DB failure and when the value is unchanged.
+        // A backup restoring the exact same data is still a success; detect it by comparing.
+        $unchanged = ($restored === false && $backup === $existing);
+        if ($restored || $unchanged) {
             delete_transient($backupKey);
         }
 
-        return (bool) $restored;
+        return $restored || $unchanged;
     }
 
     /**
@@ -222,7 +240,7 @@ class ExportImport
             if ($prefix !== '') {
                 $value = array_filter(
                     $value,
-                    static fn(string $key): bool => strpos($key, $prefix) === 0,
+                    static fn($key): bool => strpos((string) $key, $prefix) === 0,
                     ARRAY_FILTER_USE_KEY
                 );
             }
