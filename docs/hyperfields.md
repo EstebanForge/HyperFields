@@ -73,6 +73,51 @@ $sec   = HyperFields::makeSection('general', 'General');
 
 Refer to the HyperFields classes for the available methods on each object. Keep your implementation simple and PHP-first.
 
+## Options Page Features
+
+Recent HyperFields options work added the following capabilities:
+
+- Explicit tab API in `OptionsPage`:
+  - `addTab(string $id, string $title)`
+  - `addSectionToTab(string $tabId, string $sectionId, string $title, string $description = '', array $args = [])`
+- Section metadata in `OptionsSection`:
+  - `slug` for section URL targeting (`?section=...`)
+  - `as_link` to render section entries in a `subsubsub` menu
+  - `allow_html_description` to render section descriptions through `wp_kses_post`
+- Options page rendering/saving behavior now supports:
+  - active tab + active section hidden fields
+  - section menu rendering for linked sections
+  - rendering and sanitizing only the currently active/renderable sections of a tab
+- Additional field and options-page behavior:
+  - `menu_icon` and `menu_position` map to options page menu metadata
+  - `visible` callbacks can skip fields at registration/render time
+  - alias support for `code-editor` / `code_editor` with WordPress code editor behavior
+  - alias support for `wp-editor` / `wp_editor` mapped to HyperFields `rich_text`
+  - alias support for `media` / `video` mapped to HyperFields `image`
+  - `css.input_class` and `css.label_class` mapped to field args
+  - `attributes` + `custom_attributes` merged into rendered input attributes
+  - `validate` and `sanitize` callbacks are executed in the save pipeline
+  - `rows` / `cols` and editor settings (`wpautop`, `teeny`, `tinymce`, `quicktags`, etc.) are passed through
+  - tab/section `option_level` flags write and read nested option paths
+  - legacy custom option classes can be bridged via a legacy option-type map filter
+  - descriptions can be rendered as HTML when required
+  - per-field validation feedback is attached and rendered inline
+
+### Field Template Args (Newly Supported)
+
+Field templates now support these args consistently:
+
+- `input_class`: appended to rendered input controls
+- `label_class`: appended to rendered labels
+- `help_is_html`: renders help/description through `wp_kses_post` instead of escaping
+- `input_type`: override text inputs with `email`, `url`, `number`, etc.
+- `attributes`: additional safe HTML attributes rendered in field inputs
+- `rows` / `cols`: textarea sizing controls
+- `editor_settings`: rich-text editor settings passed into `wp_editor()`
+- `error`: inline field validation message resolved from settings errors
+
+These are exposed through `Field::toArray()` and are available to custom templates/renderers.
+
 
 ## Integration Examples
 
@@ -376,6 +421,51 @@ Notes and assumptions:
 - `hf_update_field()` will run `Field::sanitizeValue()` when a `type` is provided in the `$args`.
 - When rendering values in templates always escape output according to the value shape (use `esc_html()`, `esc_url()`, `wp_kses_post()` as appropriate).
 
+### Authoritative Type Matrix
+
+Core HyperFields field types accepted by `Field::make()`:
+
+- `text`
+- `textarea`
+- `number`
+- `email`
+- `url`
+- `color`
+- `date`
+- `datetime`
+- `time`
+- `image`
+- `file`
+- `select`
+- `multiselect`
+- `checkbox`
+- `radio`
+- `radio_image`
+- `rich_text`
+- `hidden`
+- `html`
+- `map`
+- `oembed`
+- `separator`
+- `header_scripts`
+- `footer_scripts`
+- `set`
+- `sidebar`
+- `association`
+- `tabs`
+- `custom`
+- `heading`
+- `media_gallery`
+- `repeater`
+
+Accepted field aliases:
+
+- `choices` -> `radio`
+- `select-multiple` / `select_multiple` -> `multiselect`
+- `wp-editor` / `wp_editor` -> `rich_text`
+- `media` / `video` -> `image`
+- `code-editor` / `code_editor` -> WordPress CodeMirror-backed custom field
+
 ### Text
 
 Use for single-line strings.
@@ -527,21 +617,20 @@ echo esc_url($url);
 
 Sanitization: validated via `esc_url_raw()`/`esc_url()` semantics; schemes like `javascript:` are removed.
 
-### Media
+### Image (aliases: `media`, `video`)
 
-Reference to an attachment. By default the field returns an attachment ID; configuration may allow returning an array with metadata.
+Reference to an attachment ID. Native HyperFields type is `image`. `media` and `video` aliases are translated to `image`.
 
 Declaration:
 
 ```php
-$field = HyperFields::makeField('media', 'hero_image', 'Hero image');
-$field->setReturn('id'); // or 'array'
+$field = HyperFields::makeField('image', 'hero_image', 'Hero image');
 ```
 
 Save / retrieve:
 
 ```php
-hf_update_field('hero_image', 456, 123, [ 'type' => 'media' ]); // saves attachment ID
+hf_update_field('hero_image', 456, 123, [ 'type' => 'image' ]); // saves attachment ID
 $attachment_id = hf_get_field('hero_image', 123, [ 'default' => 0 ]);
 if ($attachment_id) {
     echo wp_get_attachment_image($attachment_id, 'large');

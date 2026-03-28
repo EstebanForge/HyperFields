@@ -10,6 +10,7 @@ final class TabProxy
      * @var array<int, SectionProxy>
      */
     private array $sections = [];
+    private bool $option_level = false;
 
     public function __construct(
         private readonly string $key,
@@ -23,10 +24,22 @@ final class TabProxy
             ? $args['id']
             : sanitize_key($this->key . '_' . $title . '_' . count($this->sections));
 
-        $section = new SectionProxy($id, $title, $args);
+        $section = new SectionProxy($this->key, $id, $title, $args);
         $this->sections[] = $section;
 
         return $section;
+    }
+
+    public function option_level(bool $flag = true): self
+    {
+        $this->option_level = $flag;
+
+        return $this;
+    }
+
+    public function is_option_level(): bool
+    {
+        return $this->option_level;
     }
 
     public function getKey(): string
@@ -47,4 +60,3 @@ final class TabProxy
         return $this->sections;
     }
 }
-
