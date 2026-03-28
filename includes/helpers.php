@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use HyperFields\Admin\ExportImportUI;
+use HyperFields\Compatibility\WPSettingsCompatibility;
 use HyperFields\ExportImport;
 use HyperFields\Field;
 use HyperFields\OptionsPage;
@@ -452,6 +453,40 @@ if (!function_exists('hf_register_data_tools_page')) {
     }
 }
 
+if (!function_exists('hf_register_wpsettings_compatibility_page')) {
+    /**
+     * Register a settings page using the compatibility schema.
+     *
+     * @param array $config Compatibility settings configuration.
+     * @return OptionsPage
+     */
+    function hf_register_wpsettings_compatibility_page(array $config): OptionsPage
+    {
+        return WPSettingsCompatibility::register($config);
+    }
+}
+
+if (!function_exists('hp_register_wpsettings_compatibility_page')) {
+    function hp_register_wpsettings_compatibility_page(array $config): OptionsPage
+    {
+        return hf_register_wpsettings_compatibility_page($config);
+    }
+}
+
+if (!function_exists('hf_register_settings_compatibility_page')) {
+    function hf_register_settings_compatibility_page(array $config): OptionsPage
+    {
+        return hf_register_wpsettings_compatibility_page($config);
+    }
+}
+
+if (!function_exists('hp_register_settings_compatibility_page')) {
+    function hp_register_settings_compatibility_page(array $config): OptionsPage
+    {
+        return hp_register_wpsettings_compatibility_page($config);
+    }
+}
+
 if (!function_exists('hf_export_options')) {
     /**
      * Export one or more WordPress option groups to a JSON string.
@@ -478,4 +513,3 @@ if (!function_exists('hf_import_options')) {
         return ExportImport::importOptions($jsonString, $allowedOptionNames, $prefix);
     }
 }
-

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace HyperFields;
 
 use HyperFields\Admin\ExportImportUI;
+use HyperFields\Compatibility\WPSettingsCompatibility;
 use HyperFields\Container\ContainerFactory;
 
 /**
@@ -84,6 +85,30 @@ class HyperFields
         }
 
         $options_page->register();
+    }
+
+    /**
+     * Register an options page from a compatibility settings configuration.
+     *
+     * @param array $config The compatibility configuration.
+     * @return OptionsPage
+     */
+    public static function registerWPSettingsCompatibilityPage(array $config): OptionsPage
+    {
+        return WPSettingsCompatibility::register($config);
+    }
+
+    /**
+     * Register an options page from a compatibility settings configuration.
+     *
+     * @deprecated Use registerWPSettingsCompatibilityPage().
+     *
+     * @param array $config The compatibility configuration.
+     * @return OptionsPage
+     */
+    public static function registerSettingsCompatibilityPage(array $config): OptionsPage
+    {
+        return self::registerWPSettingsCompatibilityPage($config);
     }
 
     /**
