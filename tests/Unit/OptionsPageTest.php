@@ -687,4 +687,55 @@ class OptionsPageTest extends \PHPUnit\Framework\TestCase
 
         $this->assertSame($this->page, $result);
     }
+
+    public function testSetAndGetPrefix()
+    {
+        $this->page->setPrefix('myplugin_');
+
+        $this->assertSame('myplugin_', $this->page->getPrefix());
+    }
+
+    public function testGetPrefixDefaultsToEmptyString()
+    {
+        $this->assertSame('', $this->page->getPrefix());
+    }
+
+    public function testMakeWithPrefix()
+    {
+        $page = OptionsPage::make('Test Page', 'test-page', 'myplugin_');
+
+        $this->assertSame('myplugin_', $page->getPrefix());
+    }
+
+    public function testAddFieldPrependsPrefix()
+    {
+        Functions\when('esc_html')->returnArg();
+        $this->page->setPrefix('myplugin_');
+        $field = Field::make('text', 'my_field', 'My Field');
+        $this->page->addField($field);
+
+        // Field name should have been prefixed
+        $this->assertSame('myplugin_my_field', $field->getName());
+    }
+
+    public function testAddFieldDoesNotDoublePrependPrefix()
+    {
+        Functions\when('esc_html')->returnArg();
+        $this->page->setPrefix('myplugin_');
+        // Already has the prefix
+        $field = Field::make('text', 'myplugin_my_field', 'Already Prefixed');
+        $this->page->addField($field);
+
+        $this->assertSame('myplugin_my_field', $field->getName());
+    }
+
+    public function testAddFieldNoPrefix()
+    {
+        Functions\when('esc_html')->returnArg();
+        // Default prefix is ''
+        $field = Field::make('text', 'my_field', 'My Field');
+        $this->page->addField($field);
+
+        $this->assertSame('my_field', $field->getName());
+    }
 }
