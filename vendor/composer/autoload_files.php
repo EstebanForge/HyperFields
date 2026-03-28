@@ -6,6 +6,9 @@ $vendorDir = dirname(__DIR__);
 $baseDir = dirname($vendorDir);
 
 return array(
+    'c72349b1fe8d0deeedd3a52e8aa814d8' => $vendorDir . '/mockery/mockery/library/helpers.php',
+    'ce9671a430e4846b44e1c68c7611f9f5' => $vendorDir . '/mockery/mockery/library/Mockery.php',
+    '051bafe20e2674435a162870efa2d2a7' => $vendorDir . '/brain/monkey/inc/api.php',
     '13f65e44352b0407f05cb5a5e174612b' => $baseDir . '/includes/helpers.php',
     '0522701f5d113a2ff6373ccc834dd7d6' => $baseDir . '/includes/backward-compatibility.php',
     'c1c635284e1ca7836efff979fb09390f' => $baseDir . '/bootstrap.php',
