@@ -1,5 +1,29 @@
 # Changelog
 
+## [1.1.0] - 2026-03-28
+
+### Added
+- `ExportImport` class: export WordPress option groups to JSON and import with prefix filtering, whitelist enforcement, automatic backup transients, and additive merge
+- `ExportImportUI` class: admin submenu page for visual Export / Import with jsondiffpatch diff preview
+- `ExportImportUI::registerPage()` — single-call public API for third-party plugins to register the Data Tools page; hooks asset enqueueing to `admin_enqueue_scripts` automatically
+- `ExportImportUI::enqueuePageAssets()` — public method to enqueue HyperFields admin CSS + jsondiffpatch diff assets
+- `HyperFields::registerDataToolsPage()` — facade entry point for `ExportImportUI::registerPage()`
+- `hf_register_data_tools_page()` helper function — procedural wrapper for registering the Data Tools page
+- `hf_export_options()` helper function — procedural wrapper for `ExportImport::exportOptions()`
+- `hf_import_options()` helper function — procedural wrapper for `ExportImport::importOptions()`
+- Export/Import UI styled with HyperFields admin CSS classes (`hyperpress-options-wrap`, `hyperpress-fields-group`, `hyperpress-field-wrapper`, etc.) for visual consistency with existing options pages
+- Full i18n coverage: all user-visible strings in `ExportImportUI` wrapped with `__()` using `hyperfields` text domain
+
+### Fixed
+- `TypeError` in prefix filter arrow functions when option arrays have integer keys — keys now explicitly cast to string before `strpos`
+- `importOptions()` returned `success: true` when whitelist or prefix filtering blocked every incoming entry — now returns `success: false` with a descriptive message
+- `restoreBackup()` did not delete the backup transient when `update_option` returned `false` because the stored value was identical to the current value — unchanged-value case now correctly detected and transient cleaned up
+- XSS via `</script>` injection in diff preview data island — `wp_json_encode` now uses `JSON_HEX_TAG | JSON_HEX_AMP` flags
+- File upload handler did not check `$_FILES['import_file']['error'] !== UPLOAD_ERR_OK` before calling `is_uploaded_file`, allowing error-state uploads to proceed
+- Non-array option values silently coerced to `[]` during export — they are now skipped entirely, matching the additive-import contract
+- `wp_json_encode` returning `false` on unencodable data caused `exportOptions` to return an empty string — fallback is now `'{}'`
+- Asset enqueueing (`wp_enqueue_style` / `wp_enqueue_script`) was called inside an `ob_start()` output buffer in `render()`, which fires too late for WordPress header output — moved to `admin_enqueue_scripts` hook
+
 ## [1.0.3] - 2026-01-08
 
 ### Fixed

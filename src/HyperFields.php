@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace HyperFields;
 
+use HyperFields\Admin\ExportImportUI;
 use HyperFields\Container\ContainerFactory;
 
 /**
@@ -285,6 +286,41 @@ class HyperFields
     }
 
     /**
+     * Register an Export / Import admin page as a submenu of an existing menu.
+     *
+     * Must be called from inside an `admin_menu` action hook.
+     *
+     * @param string $parentSlug           Parent menu slug (e.g. 'my-plugin' or 'options-general.php').
+     * @param string $pageSlug             Unique slug for this page (e.g. 'my-plugin-data-tools').
+     * @param array  $options              Associative map of WP option names to human-readable labels.
+     *                                     Example: ['myplugin_options' => 'My Plugin Settings']
+     * @param array  $allowedImportOptions Whitelist of option names permitted on import.
+     *                                     Defaults to all keys in $options.
+     * @param string $prefix               Optional key prefix applied to both export and import.
+     * @param string $title                Page heading and menu label.
+     * @param string $capability           Required capability. Default: 'manage_options'.
+     */
+    public static function registerDataToolsPage(
+        string $parentSlug,
+        string $pageSlug,
+        array $options = [],
+        array $allowedImportOptions = [],
+        string $prefix = '',
+        string $title = 'Data Export / Import',
+        string $capability = 'manage_options'
+    ): void {
+        ExportImportUI::registerPage(
+            parentSlug:           $parentSlug,
+            pageSlug:             $pageSlug,
+            options:              $options,
+            allowedImportOptions: $allowedImportOptions,
+            prefix:               $prefix,
+            title:                $title,
+            capability:           $capability,
+        );
+    }
+
+    /**
      * Export options to JSON.
      *
      * @param array $optionNames Option names to export.
@@ -303,7 +339,7 @@ class HyperFields
      * @param array $allowedOptionNames Whitelist of option names allowed to be written.
      *                                   Empty array means all option names in the JSON are allowed.
      * @param string $prefix Optional prefix filter: only keys starting with this prefix are imported.
-     * @return array Result with 'success', 'message', and optional 'backup_key'.
+     * @return array Result with 'success', 'message', and optional 'backup_keys'.
      */
     public static function importOptions(string $jsonString, array $allowedOptionNames = [], string $prefix = ''): array
     {
