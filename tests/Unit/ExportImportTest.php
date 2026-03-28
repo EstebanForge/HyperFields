@@ -1,0 +1,316 @@
+<?php
+
+declare(strict_types=1);
+
+namespace HyperFields\Tests\Unit;
+
+use Brain\Monkey;
+use Brain\Monkey\Functions;
+use HyperFields\ExportImport;
+use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
+
+class ExportImportTest extends \PHPUnit\Framework\TestCase
+{
+    use MockeryPHPUnitIntegration;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Monkey\setUp();
+
+        Functions\stubTranslationFunctions();
+        Functions\when('sanitize_text_field')->returnArg();
+        Functions\when('sanitize_key')->returnArg();
+        Functions\when('current_time')->justReturn('2024-01-01 00:00:00');
+        Functions\when('get_site_url')->justReturn('https://example.com');
+        Functions\when('set_transient')->justReturn(true);
+        Functions\when('delete_transient')->justReturn(true);
+        Functions\when('wp_json_encode')->alias(function ($data, $flags = 0) {
+            return json_encode($data, $flags);
+        });
+    }
+
+    protected function tearDown(): void
+    {
+        Monkey\tearDown();
+        parent::tearDown();
+    }
+
+    // -------------------------------------------------------------------------
+    // exportOptions
+    // -------------------------------------------------------------------------
+
+    public function testExportOptionsBasic(): void
+    {
+        Functions\when('get_option')->justReturn(['key1' => 'val1', 'key2' => 'val2']);
+
+        $json = ExportImport::exportOptions(['my_option']);
+        $data = json_decode($json, true);
+
+        $this->assertIsArray($data);
+        $this->assertSame('hyperfields_export', $data['type']);
+        $this->assertArrayHasKey('options', $data);
+        $this->assertArrayHasKey('my_option', $data['options']);
+        $this->assertSame('val1', $data['options']['my_option']['key1']);
+    }
+
+    public function testExportOptionsWithPrefixFilter(): void
+    {
+        Functions\when('get_option')->justReturn([
+            'myplugin_name'  => 'John',
+            'myplugin_email' => 'john@example.com',
+            'other_setting'  => 'should_be_excluded',
+        ]);
+
+        $json = ExportImport::exportOptions(['my_option'], 'myplugin_');
+        $data = json_decode($json, true);
+
+        $exported = $data['options']['my_option'];
+        $this->assertArrayHasKey('myplugin_name', $exported);
+        $this->assertArrayHasKey('myplugin_email', $exported);
+        $this->assertArrayNotHasKey('other_setting', $exported);
+        $this->assertSame('myplugin_', $data['prefix']);
+    }
+
+    public function testExportOptionsMultipleOptionNames(): void
+    {
+        Functions\expect('get_option')
+            ->with('option_a', [])
+            ->andReturn(['a_key' => 'a_val'])
+            ->once();
+
+        Functions\expect('get_option')
+            ->with('option_b', [])
+            ->andReturn(['b_key' => 'b_val'])
+            ->once();
+
+        $json = ExportImport::exportOptions(['option_a', 'option_b']);
+        $data = json_decode($json, true);
+
+        $this->assertArrayHasKey('option_a', $data['options']);
+        $this->assertArrayHasKey('option_b', $data['options']);
+    }
+
+    public function testExportOptionsSkipsNonArrayValues(): void
+    {
+        Functions\when('get_option')->justReturn('not_an_array');
+
+        $json = ExportImport::exportOptions(['bad_option']);
+        $data = json_decode($json, true);
+
+        $this->assertSame([], $data['options']['bad_option']);
+    }
+
+    public function testExportOptionsSkipsEmptyOptionName(): void
+    {
+        Functions\when('get_option')->justReturn([]);
+
+        $json = ExportImport::exportOptions(['', 'valid_option']);
+        $data = json_decode($json, true);
+
+        $this->assertArrayNotHasKey('', $data['options']);
+        $this->assertArrayHasKey('valid_option', $data['options']);
+    }
+
+    // -------------------------------------------------------------------------
+    // importOptions
+    // -------------------------------------------------------------------------
+
+    private function makeExportJson(array $options, string $prefix = ''): string
+    {
+        return (string) json_encode([
+            'version'     => '1.0',
+            'type'        => 'hyperfields_export',
+            'prefix'      => $prefix,
+            'exported_at' => '2024-01-01 00:00:00',
+            'site_url'    => 'https://example.com',
+            'options'     => $options,
+        ]);
+    }
+
+    public function testImportOptionsSuccess(): void
+    {
+        $existing = ['key_old' => 'old_val'];
+        $incoming = ['key_new' => 'new_val'];
+
+        Functions\when('get_option')->justReturn($existing);
+        Functions\when('update_option')->justReturn(true);
+
+        $json   = $this->makeExportJson(['my_option' => $incoming]);
+        $result = ExportImport::importOptions($json);
+
+        $this->assertTrue($result['success']);
+        $this->assertStringContainsString('successfully', $result['message']);
+    }
+
+    public function testImportOptionsIsAdditive(): void
+    {
+        $existing = ['existing_key' => 'existing_val'];
+        $incoming = ['new_key' => 'new_val'];
+
+        $merged = null;
+        Functions\when('get_option')->justReturn($existing);
+        Functions\when('update_option')->alias(function (string $name, $value) use (&$merged) {
+            $merged = $value;
+            return true;
+        });
+
+        $json = $this->makeExportJson(['my_option' => $incoming]);
+        ExportImport::importOptions($json);
+
+        $this->assertIsArray($merged);
+        $this->assertArrayHasKey('existing_key', $merged, 'Existing keys should be preserved (additive)');
+        $this->assertArrayHasKey('new_key', $merged, 'New keys should be added');
+    }
+
+    public function testImportOptionsWhitelistBlocking(): void
+    {
+        Functions\when('get_option')->justReturn([]);
+        $updateCalled = false;
+        Functions\when('update_option')->alias(function () use (&$updateCalled) {
+            $updateCalled = true;
+            return true;
+        });
+
+        $json = $this->makeExportJson(['blocked_option' => ['key' => 'val']]);
+        $result = ExportImport::importOptions($json, ['allowed_option']);
+
+        // blocked_option not in whitelist – update_option should NOT be called
+        $this->assertFalse($updateCalled);
+        // Result is still success (no errors, just nothing to import)
+        $this->assertTrue($result['success']);
+    }
+
+    public function testImportOptionsWhitelistAllowing(): void
+    {
+        Functions\when('get_option')->justReturn([]);
+        $updateCalled = false;
+        Functions\when('update_option')->alias(function () use (&$updateCalled) {
+            $updateCalled = true;
+            return true;
+        });
+
+        $json = $this->makeExportJson(['allowed_option' => ['key' => 'val']]);
+        $result = ExportImport::importOptions($json, ['allowed_option']);
+
+        $this->assertTrue($updateCalled);
+        $this->assertTrue($result['success']);
+    }
+
+    public function testImportOptionsWithPrefixFilter(): void
+    {
+        $existingData = ['myplugin_name' => 'old_name', 'other_key' => 'other_val'];
+        $incomingData = ['myplugin_name' => 'new_name', 'other_key' => 'should_be_ignored'];
+
+        $merged = null;
+        Functions\when('get_option')->justReturn($existingData);
+        Functions\when('update_option')->alias(function (string $name, $value) use (&$merged) {
+            $merged = $value;
+            return true;
+        });
+
+        $json = $this->makeExportJson(['my_option' => $incomingData], 'myplugin_');
+        ExportImport::importOptions($json, [], 'myplugin_');
+
+        $this->assertIsArray($merged);
+        $this->assertSame('new_name', $merged['myplugin_name'], 'Prefix-matched key should be imported');
+        $this->assertSame('other_val', $merged['other_key'], 'Non-prefix key should keep its original value');
+    }
+
+    public function testImportOptionsInvalidJson(): void
+    {
+        $result = ExportImport::importOptions('{not valid json}');
+
+        $this->assertFalse($result['success']);
+        $this->assertStringContainsString('Invalid JSON', $result['message']);
+    }
+
+    public function testImportOptionsEmptyString(): void
+    {
+        $result = ExportImport::importOptions('');
+
+        $this->assertFalse($result['success']);
+        $this->assertStringContainsString('Empty', $result['message']);
+    }
+
+    public function testImportOptionsMissingOptionsKey(): void
+    {
+        $json   = json_encode(['version' => '1.0', 'type' => 'hyperfields_export']);
+        $result = ExportImport::importOptions((string) $json);
+
+        $this->assertFalse($result['success']);
+        $this->assertStringContainsString('"options"', $result['message']);
+    }
+
+    public function testImportOptionsCreatesBackup(): void
+    {
+        $existing = ['key' => 'original_value'];
+        Functions\when('get_option')->justReturn($existing);
+        Functions\when('update_option')->justReturn(true);
+
+        $transientKey = null;
+        Functions\when('set_transient')->alias(function (string $key, $value, $exp) use (&$transientKey) {
+            $transientKey = $key;
+            return true;
+        });
+
+        $json   = $this->makeExportJson(['my_option' => ['key' => 'new_value']]);
+        $result = ExportImport::importOptions($json);
+
+        $this->assertTrue($result['success']);
+        $this->assertArrayHasKey('backup_keys', $result);
+        $this->assertNotNull($transientKey);
+    }
+
+    // -------------------------------------------------------------------------
+    // restoreBackup
+    // -------------------------------------------------------------------------
+
+    public function testRestoreBackupSuccess(): void
+    {
+        $backup = ['key' => 'backup_value'];
+        Functions\when('get_transient')->justReturn($backup);
+        Functions\when('update_option')->justReturn(true);
+        Functions\when('delete_transient')->justReturn(true);
+
+        $result = ExportImport::restoreBackup('hf_backup_abc123', 'my_option');
+
+        $this->assertTrue($result);
+    }
+
+    public function testRestoreBackupNotFound(): void
+    {
+        Functions\when('get_transient')->justReturn(false);
+
+        $result = ExportImport::restoreBackup('nonexistent_key', 'my_option');
+
+        $this->assertFalse($result);
+    }
+
+    // -------------------------------------------------------------------------
+    // snapshotOptions
+    // -------------------------------------------------------------------------
+
+    public function testSnapshotOptions(): void
+    {
+        Functions\when('get_option')->justReturn(['a' => '1', 'b' => '2']);
+
+        $snapshot = ExportImport::snapshotOptions(['opt1', 'opt2']);
+
+        $this->assertArrayHasKey('opt1', $snapshot);
+        $this->assertArrayHasKey('opt2', $snapshot);
+    }
+
+    public function testSnapshotOptionsWithPrefix(): void
+    {
+        Functions\when('get_option')->justReturn([
+            'pre_key'   => 'val',
+            'other_key' => 'ignored',
+        ]);
+
+        $snapshot = ExportImport::snapshotOptions(['opt1'], 'pre_');
+
+        $this->assertArrayHasKey('pre_key', $snapshot['opt1']);
+        $this->assertArrayNotHasKey('other_key', $snapshot['opt1']);
+    }
+}

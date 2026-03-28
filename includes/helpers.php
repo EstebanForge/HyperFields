@@ -19,11 +19,12 @@ if (!function_exists('hf_option_page')) {
      *
      * @param string $page_title The title of the page
      * @param string $menu_slug  The slug for the menu
+     * @param string $prefix     Optional prefix prepended to all field names
      * @return OptionsPage
      */
-    function hf_option_page(string $page_title, string $menu_slug): OptionsPage
+    function hf_option_page(string $page_title, string $menu_slug, string $prefix = ''): OptionsPage
     {
-        return OptionsPage::make($page_title, $menu_slug);
+        return OptionsPage::make($page_title, $menu_slug, $prefix);
     }
 }
 
@@ -389,8 +390,8 @@ if (!function_exists('hp_resolve_field_context')) {
     }
 }
 if (!function_exists('hp_create_option_page')) {
-    function hp_create_option_page(string $page_title, string $menu_slug): OptionsPage {
-        return hf_option_page($page_title, $menu_slug);
+    function hp_create_option_page(string $page_title, string $menu_slug, string $prefix = ''): OptionsPage {
+        return hf_option_page($page_title, $menu_slug, $prefix);
     }
 }
 if (!function_exists('hp_create_field')) {

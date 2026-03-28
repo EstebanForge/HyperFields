@@ -19,13 +19,14 @@ class OptionsPage
     private array $option_values = [];
     private array $default_values = [];
     private ?string $footer_content = null;
+    private string $prefix = '';
 
-    public static function make(string $page_title, string $menu_slug): self
+    public static function make(string $page_title, string $menu_slug, string $prefix = ''): self
     {
-        return new self($page_title, $menu_slug);
+        return new self($page_title, $menu_slug, $prefix);
     }
 
-    private function __construct(string $page_title, string $menu_slug)
+    private function __construct(string $page_title, string $menu_slug, string $prefix = '')
     {
         $this->page_title = $page_title;
         $this->menu_title = $page_title;
@@ -34,6 +35,7 @@ class OptionsPage
         $this->parent_slug = 'options-general.php';
         $this->icon_url = '';
         $this->position = null;
+        $this->prefix = $prefix;
     }
 
     public function setMenuTitle(string $menu_title): self
@@ -85,6 +87,18 @@ class OptionsPage
         return $this;
     }
 
+    public function setPrefix(string $prefix): self
+    {
+        $this->prefix = $prefix;
+
+        return $this;
+    }
+
+    public function getPrefix(): string
+    {
+        return $this->prefix;
+    }
+
     public function getOptionName(): string
     {
         return $this->option_name;
@@ -112,6 +126,9 @@ class OptionsPage
 
     public function addField(Field $field): self
     {
+        if ($this->prefix !== '' && strpos($field->getName(), $this->prefix) !== 0) {
+            $field->setName($this->prefix . $field->getName());
+        }
         $this->fields[$field->getName()] = $field;
 
         return $this;

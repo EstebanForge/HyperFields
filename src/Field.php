@@ -193,6 +193,16 @@ class Field
         return $this->name;
     }
 
+    public function setName(string $name): self
+    {
+        if (!preg_match('/^[a-zA-Z_][a-zA-Z0-9_-]*$/', $name)) {
+            throw new \InvalidArgumentException('Invalid field name: ' . sanitize_text_field($name));
+        }
+        $this->name = $name;
+
+        return $this;
+    }
+
     public function getLabel(): string
     {
         return $this->label;

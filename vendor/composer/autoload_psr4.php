@@ -6,5 +6,8 @@ $vendorDir = dirname(__DIR__);
 $baseDir = dirname($vendorDir);
 
 return array(
+    'Mockery\\' => array($vendorDir . '/mockery/mockery/library/Mockery'),
+    'HyperFields\\Tests\\' => array($baseDir . '/tests'),
     'HyperFields\\' => array($baseDir . '/src'),
+    'Brain\\Monkey\\' => array($vendorDir . '/brain/monkey/src'),
 );
