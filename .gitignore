@@ -19,6 +19,3 @@ tests/reports/teamcity.txt
 tests/reports/coverage.xml
 coverage.txt
 coverage.xml
-
-# Vendor dependencies (should not be committed)
-/vendor/

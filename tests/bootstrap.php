@@ -55,6 +55,11 @@ if (!file_exists($composer)) {
 }
 require_once $composer;
 
+// Required by PHPUnit's RunInSeparateProcess to locate the autoloader in child processes.
+if (!defined('PHPUNIT_COMPOSER_INSTALL')) {
+    define('PHPUNIT_COMPOSER_INSTALL', $composer);
+}
+
 // Load BrainMonkey
 Brain\Monkey\setUp();
 

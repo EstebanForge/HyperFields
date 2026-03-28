@@ -31,19 +31,20 @@
         }
     },
     "require-dev": {
-        "phpunit/phpunit": "^11.0",
+        "phpunit/phpunit": "^12.0",
+        "pestphp/pest": "^4.4",
         "brain/monkey": "^2.6",
         "mockery/mockery": "^1.6"
     },
     "scripts": {
-        "test": "php -d pcov.enabled=1 vendor/bin/phpunit --colors=always",
-        "test:unit": "php -d pcov.enabled=1 vendor/bin/phpunit tests/Unit --colors=always",
-        "test:integration": "php -d pcov.enabled=1 vendor/bin/phpunit tests/Integration --colors=always",
-        "test:coverage": "php -d pcov.enabled=1 vendor/bin/phpunit --configuration phpunit.xml --coverage-html coverage-html --coverage-text",
-        "test:fast": "php -d pcov.enabled=1 vendor/bin/phpunit --configuration phpunit.xml --coverage-html coverage-html --coverage-text",
-        "test:summary": "php -d pcov.enabled=1 vendor/bin/phpunit --configuration phpunit.xml --coverage-text",
-        "test:clover": "php -d pcov.enabled=1 vendor/bin/phpunit --configuration phpunit.xml --coverage-clover coverage.xml",
-        "test:xdebug": "XDEBUG_MODE=coverage vendor/bin/phpunit --configuration phpunit.xml --coverage-html coverage-xdebug-html --coverage-text",
+        "test": "php -d pcov.enabled=1 vendor/bin/pest --colors=always",
+        "test:unit": "php -d pcov.enabled=1 vendor/bin/pest tests/Unit --colors=always",
+        "test:integration": "php -d pcov.enabled=1 vendor/bin/pest tests/Integration --colors=always",
+        "test:coverage": "php -d pcov.enabled=1 vendor/bin/pest --configuration phpunit.xml --coverage-html coverage-html --coverage-text",
+        "test:fast": "php -d pcov.enabled=1 vendor/bin/pest --configuration phpunit.xml --coverage-html coverage-html --coverage-text",
+        "test:summary": "php -d pcov.enabled=1 vendor/bin/pest --configuration phpunit.xml --coverage-text",
+        "test:clover": "php -d pcov.enabled=1 vendor/bin/pest --configuration phpunit.xml --coverage-clover coverage.xml",
+        "test:xdebug": "XDEBUG_MODE=coverage vendor/bin/pest --configuration phpunit.xml --coverage-html coverage-xdebug-html --coverage-text",
         "test:coverage:xdebug": "XDEBUG_MODE=coverage vendor/bin/phpunit --configuration phpunit.xml --coverage-html coverage-xdebug-html --coverage-text",
         "test:summary:xdebug": "XDEBUG_MODE=coverage vendor/bin/phpunit --configuration phpunit.xml --coverage-text",
         "test:clover:xdebug": "XDEBUG_MODE=coverage vendor/bin/phpunit --configuration phpunit.xml --coverage-clover coverage-xdebug.xml",
@@ -54,7 +55,8 @@
 
     "config": {
         "allow-plugins": {
-            "composer/installers": true
+            "composer/installers": true,
+            "pestphp/pest-plugin": true
         }
     }
 }
