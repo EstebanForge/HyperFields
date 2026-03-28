@@ -25,7 +25,8 @@ class HyperFields
      */
     public static function registerOptionsPage(array $config): void
     {
-        $options_page = self::makeOptionPage($config['title'], $config['slug']);
+        $prefix = $config['prefix'] ?? '';
+        $options_page = self::makeOptionPage($config['title'], $config['slug'], $prefix);
 
         if (isset($config['menu_title'])) {
             $options_page->setMenuTitle($config['menu_title']);
@@ -89,11 +90,12 @@ class HyperFields
      *
      * @param string $page_title The title of the page
      * @param string $menu_slug The slug for the menu
+     * @param string $prefix Optional prefix for field names
      * @return OptionsPage
      */
-    public static function makeOptionPage(string $page_title, string $menu_slug): OptionsPage
+    public static function makeOptionPage(string $page_title, string $menu_slug, string $prefix = ''): OptionsPage
     {
-        return OptionsPage::make($page_title, $menu_slug);
+        return OptionsPage::make($page_title, $menu_slug, $prefix);
     }
 
     /**
@@ -280,5 +282,31 @@ class HyperFields
     public static function makeUserMeta(string $id, string $title): Container\UserMetaContainer
     {
         return ContainerFactory::makeUserMeta($id, $title);
+    }
+
+    /**
+     * Export options to JSON.
+     *
+     * @param array $optionNames Option names to export.
+     * @param string $prefix Optional prefix filter: only keys starting with this prefix are included.
+     * @return string JSON string of the exported data.
+     */
+    public static function exportOptions(array $optionNames, string $prefix = ''): string
+    {
+        return ExportImport::exportOptions($optionNames, $prefix);
+    }
+
+    /**
+     * Import options from JSON.
+     *
+     * @param string $jsonString The JSON string to import.
+     * @param array $allowedOptionNames Whitelist of option names allowed to be written.
+     *                                   Empty array means all option names in the JSON are allowed.
+     * @param string $prefix Optional prefix filter: only keys starting with this prefix are imported.
+     * @return array Result with 'success', 'message', and optional 'backup_key'.
+     */
+    public static function importOptions(string $jsonString, array $allowedOptionNames = [], string $prefix = ''): array
+    {
+        return ExportImport::importOptions($jsonString, $allowedOptionNames, $prefix);
     }
 }
