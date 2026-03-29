@@ -271,7 +271,7 @@ class ExportImportUI
             'https://cdn.jsdelivr.net/npm/jsondiffpatch@' . $version . '/dist/jsondiffpatch.umd.js',
             [],
             $version,
-            true
+            false
         );
     }
 
@@ -493,7 +493,7 @@ class ExportImportUI
 
             <div class="hyperpress-field-wrapper">
                 <div id="hf-diff-container" class="hyperpress-field-input-wrapper" style="overflow:auto;max-height:600px;">
-                    <p><?php esc_html_e('Loading diff\xe2\x80\xa6', 'hyperfields'); ?></p>
+                    <p><?php esc_html_e('Loading diff…', 'hyperfields'); ?></p>
                 </div>
             </div>
 
@@ -517,7 +517,11 @@ class ExportImportUI
                 var incoming  = <?php echo wp_json_encode($incomingData, JSON_HEX_TAG | JSON_HEX_AMP); ?>;
                 var container = document.getElementById('hf-diff-container');
 
-                if (!window.jsondiffpatch || !container) { return; }
+                if (!container) { return; }
+                if (!window.jsondiffpatch) {
+                    container.innerHTML = '<p><?php echo esc_js(__('Could not load the diff library. Please reload the page and try again.', 'hyperfields')); ?></p>';
+                    return;
+                }
 
                 try {
                     var delta = jsondiffpatch.diff(current, incoming);
