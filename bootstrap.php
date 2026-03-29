@@ -162,9 +162,13 @@ if (defined('HYPERFIELDS_BOOTSTRAP_LOADED')) {
 define('HYPERFIELDS_BOOTSTRAP_LOADED', true);
 
 // Composer autoloader.
-if (file_exists(__DIR__ . '/vendor/autoload.php')) {
+// When loaded from another package's /vendor tree, avoid loading nested vendor/autoload.php
+// to prevent duplicate Composer autoloader class declarations.
+$normalizedDir = str_replace('\\', '/', __DIR__);
+$loadedFromVendorTree = str_contains($normalizedDir, '/vendor/');
+if (!$loadedFromVendorTree && file_exists(__DIR__ . '/vendor/autoload.php')) {
     require_once __DIR__ . '/vendor/autoload.php';
-} else {
+} elseif (!$loadedFromVendorTree) {
     // Display an admin notice if no autoloader is found, but continue so tests can register hooks/candidates.
     add_action('admin_notices', function () {
         echo '<div class="error"><p>' . esc_html__('HyperFields: Composer autoloader not found. Please run "composer install" inside the plugin folder.', 'hyperfields') . '</p></div>';
