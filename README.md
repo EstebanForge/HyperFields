@@ -48,7 +48,7 @@ Procedural helpers are available with `hf_` prefix (for example: `hf_field`, `hf
 
 ## Requirements
 
-- PHP 8.1+
+- PHP 8.2+
 
 ## Testing
 

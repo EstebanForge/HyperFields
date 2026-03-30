@@ -91,9 +91,17 @@ class ExportImportUI
         ?callable $importer = null,
         ?string $exportFormExtras = null,
     ): void {
-        if (empty($allowedImportOptions)) {
-            $allowedImportOptions = array_keys($options);
-        }
+        $config = new ExportImportPageConfig(
+            options: $options,
+            allowedImportOptions: $allowedImportOptions,
+            prefix: $prefix,
+            title: $title,
+            description: $description,
+            exporter: $exporter,
+            previewer: $previewer,
+            importer: $importer,
+            exportFormExtras: $exportFormExtras,
+        );
 
         // Determine the hook suffix WordPress will assign to this page
         $parentBase   = str_replace('.php', '', basename($parentSlug));
@@ -112,19 +120,24 @@ class ExportImportUI
             $title,
             $capability,
             $pageSlug,
-            static function () use ($options, $allowedImportOptions, $prefix, $title, $description, $exporter, $previewer, $importer, $exportFormExtras): void {
-                echo self::render(
-                    options:              $options,
-                    allowedImportOptions: $allowedImportOptions,
-                    prefix:               $prefix,
-                    title:                $title,
-                    description:          $description,
-                    exporter:             $exporter,
-                    previewer:            $previewer,
-                    importer:             $importer,
-                    exportFormExtras:     $exportFormExtras,
-                );
+            static function () use ($config): void {
+                echo self::renderConfigured($config);
             }
+        );
+    }
+
+    public static function renderConfigured(ExportImportPageConfig $config): string
+    {
+        return self::render(
+            options:              $config->options,
+            allowedImportOptions: $config->resolvedAllowedImportOptions(),
+            prefix:               $config->prefix,
+            title:                $config->title,
+            description:          $config->description,
+            exporter:             $config->exporter,
+            previewer:            $config->previewer,
+            importer:             $config->importer,
+            exportFormExtras:     $config->exportFormExtras,
         );
     }
 

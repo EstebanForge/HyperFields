@@ -228,7 +228,7 @@ if (!$result['success']) {
 
 ## Important Notes
 
-- PHP 8.1+ required
+- PHP 8.2+ required
 - WordPress 5.0+ required
 - Uses PSR-4 autoloading
 - Optimized for production with `--optimize-autoloader`
