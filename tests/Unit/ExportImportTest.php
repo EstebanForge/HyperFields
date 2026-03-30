@@ -91,15 +91,15 @@ class ExportImportTest extends \PHPUnit\Framework\TestCase
         $this->assertArrayHasKey('option_b', $data['options']);
     }
 
-    public function testExportOptionsSkipsNonArrayValues(): void
+    public function testExportOptionsSupportsScalarValues(): void
     {
-        Functions\when('get_option')->justReturn('not_an_array');
+        Functions\when('get_option')->justReturn('scalar_value');
 
-        $json = ExportImport::exportOptions(['bad_option']);
+        $json = ExportImport::exportOptions(['my_scalar_option']);
         $data = json_decode($json, true);
 
-        // Non-array option values are silently skipped; the key must not appear in the output.
-        $this->assertArrayNotHasKey('bad_option', $data['options']);
+        $this->assertArrayHasKey('my_scalar_option', $data['options']);
+        $this->assertSame('scalar_value', $data['options']['my_scalar_option']);
     }
 
     public function testExportOptionsSkipsEmptyOptionName(): void
@@ -218,6 +218,36 @@ class ExportImportTest extends \PHPUnit\Framework\TestCase
         $this->assertSame('other_val', $merged['other_key'], 'Non-prefix key should keep its original value');
     }
 
+    public function testImportOptionsReplaceModeForArrayValues(): void
+    {
+        $existing = ['existing_key' => 'existing_val'];
+        $incoming = ['new_key' => 'new_val'];
+
+        $written = null;
+        Functions\when('get_option')->justReturn($existing);
+        Functions\when('update_option')->alias(function (string $name, $value) use (&$written) {
+            $written = $value;
+            return true;
+        });
+
+        $json = $this->makeExportJson(['my_option' => $incoming]);
+        $result = ExportImport::importOptions($json, [], '', ['mode' => 'replace']);
+
+        $this->assertTrue($result['success']);
+        $this->assertSame($incoming, $written);
+    }
+
+    public function testImportOptionsSupportsScalarValues(): void
+    {
+        Functions\when('get_option')->justReturn('old_value');
+        Functions\when('update_option')->justReturn(true);
+
+        $json = $this->makeExportJson(['my_option' => 'new_value']);
+        $result = ExportImport::importOptions($json);
+
+        $this->assertTrue($result['success']);
+    }
+
     public function testImportOptionsInvalidJson(): void
     {
         $result = ExportImport::importOptions('{not valid json}');
@@ -326,44 +356,55 @@ class ExportImportTest extends \PHPUnit\Framework\TestCase
         $this->assertArrayHasKey('real_opt', $snapshot);
     }
 
-    public function testSnapshotOptionsNonArrayValueCoercedToEmpty(): void
+    public function testSnapshotOptionsPreservesScalarValue(): void
     {
         Functions\when('get_option')->justReturn('scalar');
 
         $snapshot = ExportImport::snapshotOptions(['opt1']);
 
-        $this->assertSame([], $snapshot['opt1']);
+        $this->assertSame('scalar', $snapshot['opt1']);
     }
 
     // -------------------------------------------------------------------------
     // importOptions — edge-case branches
     // -------------------------------------------------------------------------
 
-    public function testImportOptionsSkipsNonArrayIncomingValue(): void
+    public function testImportOptionsAllowsScalarPayloadAlongsideArrayPayload(): void
     {
-        // A scalar value inside options should add an error but not fail outright
-        // if another option succeeds.
         Functions\when('get_option')->justReturn([]);
         Functions\when('update_option')->justReturn(true);
 
         $json = $this->makeExportJson([
             'good_option' => ['key' => 'val'],
-            'bad_option'  => 'not_an_array',
+            'scalar_option'  => 'scalar',
         ]);
         $result = ExportImport::importOptions($json);
 
         $this->assertTrue($result['success']);
-        $this->assertStringContainsString('bad_option', $result['message']);
+        $this->assertStringContainsString('successfully', $result['message']);
     }
 
-    public function testImportOptionsAllSkippedWithErrors(): void
+    public function testImportOptionsSkipsScalarWhenPrefixIsSet(): void
     {
-        // All incoming values are non-array; nothing imported, errors present.
-        $json   = $this->makeExportJson(['bad_opt' => 'scalar']);
-        $result = ExportImport::importOptions($json);
+        Functions\when('get_option')->justReturn('old');
+        Functions\when('update_option')->justReturn(true);
+
+        $json = $this->makeExportJson(['scalar_option' => 'new']);
+        $result = ExportImport::importOptions($json, [], 'myp_');
 
         $this->assertFalse($result['success']);
-        $this->assertStringContainsString('bad_opt', $result['message']);
+        $this->assertStringContainsString('scalar values cannot be prefix-filtered', $result['message']);
+    }
+
+    public function testDiffOptionsReturnsChanges(): void
+    {
+        Functions\when('get_option')->justReturn(['existing' => 'old']);
+
+        $json = $this->makeExportJson(['my_option' => ['existing' => 'new']]);
+        $result = ExportImport::diffOptions($json);
+
+        $this->assertTrue($result['success']);
+        $this->assertArrayHasKey('my_option', $result['changes']);
     }
 
     public function testImportOptionsPrefixFiltersOutAllIncomingKeys(): void
