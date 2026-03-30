@@ -496,7 +496,6 @@ CSS);
                                 <?php esc_html_e('Invert selection', 'hyperfields'); ?>
                             </button>
                         </div>
-                        <span class="description"><?php esc_html_e('Scroll inside this list when many options are available.', 'hyperfields'); ?></span>
                     </div>
                     <div class="hf-export-options-table-wrap">
                         <table class="widefat striped fixed hf-export-options-table">
@@ -533,9 +532,12 @@ CSS);
                         </table>
                     </div>
                     <div class="hf-export-options-filter">
-                        <label for="hf_export_options_filter">
-                            <?php esc_html_e('Filter options', 'hyperfields'); ?>
-                        </label>
+                        <div class="hf-export-options-filter-header">
+                            <label for="hf_export_options_filter">
+                                <?php esc_html_e('Filter options', 'hyperfields'); ?>
+                            </label>
+                            <span class="description" data-hf-export-filter-count></span>
+                        </div>
                         <div class="hf-export-options-filter-controls">
                             <input type="search"
                                    id="hf_export_options_filter"
@@ -545,7 +547,6 @@ CSS);
                             <button type="button" class="button button-secondary" data-hf-export-filter-clear>
                                 <?php esc_html_e('Clear', 'hyperfields'); ?>
                             </button>
-                            <span class="description" data-hf-export-filter-count></span>
                         </div>
                     </div>
                 </fieldset>
