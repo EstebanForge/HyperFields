@@ -9,6 +9,15 @@ namespace HyperFields\Transfer;
  *
  * Enables external consumers to register module-level export/import/diff
  * handlers and orchestrate them through one generic manager.
+ *
+ * To customise the export envelope shape use {@see SchemaConfig}:
+ * ```php
+ * $manager->withSchema(new SchemaConfig(
+ *     type: 'my_plugin_manifest',
+ *     schema_version: 2,
+ *     extra: ['site' => ['url' => get_site_url(), 'environment' => 'staging']],
+ * ))->export();
+ * ```
  */
 class Manager
 {
@@ -20,6 +29,20 @@ class Manager
      * }>
      */
     private array $modules = [];
+
+    private ?SchemaConfig $schemaConfig = null;
+
+    /**
+     * Set a custom schema configuration for export envelopes.
+     *
+     * Returns the same Manager instance for fluent chaining.
+     */
+    public function withSchema(SchemaConfig $config): static
+    {
+        $this->schemaConfig = $config;
+
+        return $this;
+    }
 
     public function registerModule(string $key, callable $exporter, callable $importer, ?callable $differ = null): void
     {
@@ -78,13 +101,18 @@ class Manager
             }
         }
 
-        return [
-            'schema_version' => 1,
-            'type' => 'hyperfields_transfer_bundle',
-            'generated_at' => gmdate('c'),
-            'modules' => $modules,
-            'errors' => $errors,
-        ];
+        $schema = $this->schemaConfig ?? new SchemaConfig();
+
+        return array_merge(
+            $schema->safeExtra(),
+            [
+                'schema_version' => $schema->schema_version,
+                'type'           => $schema->type,
+                'generated_at'   => gmdate('c'),
+                'modules'        => $modules,
+                'errors'         => $errors,
+            ]
+        );
     }
 
     /**
