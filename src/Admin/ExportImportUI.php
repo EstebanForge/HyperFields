@@ -85,7 +85,10 @@ class ExportImportUI
         string $prefix = '',
         string $title = 'Data Export / Import',
         string $capability = 'manage_options',
-        string $description = 'Export your settings to JSON or import a previously exported file.'
+        string $description = 'Export your settings to JSON or import a previously exported file.',
+        ?callable $exporter = null,
+        ?callable $previewer = null,
+        ?callable $importer = null,
     ): void {
         if (empty($allowedImportOptions)) {
             $allowedImportOptions = array_keys($options);
@@ -108,13 +111,16 @@ class ExportImportUI
             $title,
             $capability,
             $pageSlug,
-            static function () use ($options, $allowedImportOptions, $prefix, $title, $description): void {
+            static function () use ($options, $allowedImportOptions, $prefix, $title, $description, $exporter, $previewer, $importer): void {
                 echo self::render(
                     options:              $options,
                     allowedImportOptions: $allowedImportOptions,
                     prefix:               $prefix,
                     title:                $title,
                     description:          $description,
+                    exporter:             $exporter,
+                    previewer:            $previewer,
+                    importer:             $importer,
                 );
             }
         );
@@ -160,12 +166,36 @@ class ExportImportUI
      * @param string $description          Short description shown below the heading.
      * @return string HTML ready to be echo'd inside a WP admin page callback.
      */
+    /**
+     * Render the complete export/import UI as an HTML string.
+     *
+     * @param array         $options              Associative map of WP option names to human-readable labels.
+     * @param array         $allowedImportOptions Whitelist of option names permitted to be overwritten on import.
+     *                                            Defaults to all keys in $options.
+     * @param string        $prefix               Optional prefix filter applied to both export and import.
+     * @param string        $title                Page heading displayed at the top.
+     * @param string        $description          Short description shown below the heading.
+     * @param callable|null $exporter             Optional custom export callable. Replaces ExportImport::exportOptions().
+     *                                            Signature: fn(array $selectedNames, string $prefix): string
+     *                                            Must return a JSON string ready for display/download.
+     * @param callable|null $previewer            Optional custom preview/diff callable. Replaces handlePreview().
+     *                                            Signature: fn(array $decoded, array $allowedImportOptions, string $prefix, array $options): array
+     *                                            Must return: {success: bool, message?: string, transient_key?: string, current?: array, incoming?: array}
+     *                                            The $decoded argument is the JSON-decoded upload payload (associative array).
+     * @param callable|null $importer             Optional custom import callable. Replaces ExportImport::importOptions().
+     *                                            Signature: fn(string $jsonString, array $allowedImportOptions, string $prefix): array
+     *                                            Must return: {success: bool, message: string}
+     * @return string HTML ready to be echo'd inside a WP admin page callback.
+     */
     public static function render(
         array $options = [],
         array $allowedImportOptions = [],
         string $prefix = '',
         string $title = 'Data Export / Import',
-        string $description = 'Export your settings to JSON or import a previously exported file.'
+        string $description = 'Export your settings to JSON or import a previously exported file.',
+        ?callable $exporter = null,
+        ?callable $previewer = null,
+        ?callable $importer = null,
     ): string {
         if (empty($allowedImportOptions)) {
             $allowedImportOptions = array_keys($options);
@@ -187,6 +217,12 @@ class ExportImportUI
 
             if (empty($selectedNames)) {
                 $exportError = __('Please select at least one option group to export.', 'hyperfields');
+            } elseif ($exporter !== null) {
+                $result = call_user_func($exporter, $selectedNames, $prefix);
+                $exportJson = is_string($result) ? $result : '';
+                if ($exportJson === '') {
+                    $exportError = __('The custom exporter returned an empty result.', 'hyperfields');
+                }
             } else {
                 $exportJson = ExportImport::exportOptions($selectedNames, $prefix);
             }
@@ -205,7 +241,7 @@ class ExportImportUI
             && is_array($_FILES['hf_import_file'])
         ) {
             $file          = $_FILES['hf_import_file'];
-            $previewResult = self::handlePreview($file, $allowedImportOptions, $prefix, $options);
+            $previewResult = self::handlePreview($file, $allowedImportOptions, $prefix, $options, $previewer);
 
             if ($previewResult['success']) {
                 $previewTransientKey = $previewResult['transient_key'];
@@ -231,9 +267,11 @@ class ExportImportUI
             $storedJson = $transientKey ? get_transient($transientKey) : false;
 
             if ($storedJson && is_string($storedJson)) {
-                $result        = ExportImport::importOptions($storedJson, $allowedImportOptions, $prefix);
-                $importSuccess = $result['success'];
-                $importMessage = $result['message'];
+                $result = $importer !== null
+                    ? call_user_func($importer, $storedJson, $allowedImportOptions, $prefix)
+                    : ExportImport::importOptions($storedJson, $allowedImportOptions, $prefix);
+                $importSuccess = (bool) ($result['success'] ?? false);
+                $importMessage = (string) ($result['message'] ?? '');
                 delete_transient($transientKey);
             } else {
                 $importMessage = __('Import session expired or is invalid. Please upload the file again.', 'hyperfields');
@@ -365,17 +403,23 @@ CSS);
      * The uploaded JSON is stored in a transient (5-minute TTL) so the confirmation
      * step can retrieve it without re-uploading.
      *
-     * @param array  $file                 The $_FILES['hf_import_file'] entry.
-     * @param array  $allowedImportOptions Allowed option names.
-     * @param string $prefix               Prefix filter.
-     * @param array  $options              Full options map (for snapshot scope).
+     * When $previewer is provided it replaces the built-in options-based logic.
+     * The callable receives the JSON-decoded payload and must return:
+     *   {success: bool, message?: string, transient_key?: string, current?: array, incoming?: array}
+     *
+     * @param array         $file                 The $_FILES['hf_import_file'] entry.
+     * @param array         $allowedImportOptions Allowed option names.
+     * @param string        $prefix               Prefix filter.
+     * @param array         $options              Full options map (for snapshot scope).
+     * @param callable|null $previewer            Optional custom previewer callable.
      * @return array{success: bool, message?: string, transient_key?: string, current?: array, incoming?: array}
      */
     private static function handlePreview(
         array $file,
         array $allowedImportOptions,
         string $prefix,
-        array $options
+        array $options,
+        ?callable $previewer = null,
     ): array {
         if (
             !isset($file['tmp_name'], $file['error'])
@@ -400,7 +444,18 @@ CSS);
             return ['success' => false, 'message' => sprintf(__('Invalid JSON: %s', 'hyperfields'), json_last_error_msg())];
         }
 
-        if (!is_array($decoded) || !isset($decoded['options']) || !is_array($decoded['options'])) {
+        if (!is_array($decoded)) {
+            return ['success' => false, 'message' => __('The uploaded file does not appear to be a valid export.', 'hyperfields')];
+        }
+
+        // Custom previewer: delegate validation, diffing, and snapshot entirely.
+        if ($previewer !== null) {
+            $result = call_user_func($previewer, $decoded, $jsonString, $allowedImportOptions, $prefix, $options);
+            return is_array($result) ? $result : ['success' => false, 'message' => __('The custom previewer returned an invalid result.', 'hyperfields')];
+        }
+
+        // Default path: expect HyperFields options envelope.
+        if (!isset($decoded['options']) || !is_array($decoded['options'])) {
             return ['success' => false, 'message' => __('The uploaded file does not appear to be a valid HyperFields export.', 'hyperfields')];
         }
 
@@ -554,6 +609,7 @@ CSS);
                     <button type="submit" name="hf_export_submit" class="button button-primary">
                         <?php esc_html_e('Export to JSON', 'hyperfields'); ?>
                     </button>
+                    <span class="spinner"></span>
                 </p>
             </form>
 

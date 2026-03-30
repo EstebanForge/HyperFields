@@ -156,19 +156,65 @@ $diff   = $manager->diff($bundle);
 $apply  = $manager->import($bundle);
 ```
 
-Bundle shape:
+Default bundle shape:
+
+```json
+{
+  "schema_version": 1,
+  "type": "hyperfields_transfer_bundle",
+  "generated_at": "...",
+  "modules": {
+    "options": {}
+  },
+  "errors": []
+}
+```
+
+### Custom export envelope (SchemaConfig)
+
+Class: `HyperFields\Transfer\SchemaConfig`
+
+By default the export envelope uses HyperFields type identifiers and schema version 1. Use `SchemaConfig` to override any of these values and inject additional top-level keys (e.g. `site`, `environment`, `app_version`) without modifying HyperFields itself.
 
 ```php
-[
-  'schema_version' => 1,
-  'type' => 'hyperfields_transfer_bundle',
-  'generated_at' => '...',
-  'modules' => [
-    'options' => [/* module payload */]
-  ],
-  'errors' => []
-]
+use HyperFields\Transfer\Manager;
+use HyperFields\Transfer\SchemaConfig;
+
+$manager = (new Manager())->withSchema(new SchemaConfig(
+    type: 'my_plugin_manifest',
+    schema_version: 2,
+    extra: [
+        'site' => [
+            'url'         => get_site_url(),
+            'environment' => defined('WP_ENVIRONMENT_TYPE') ? WP_ENVIRONMENT_TYPE : 'production',
+        ],
+    ],
+));
+
+$bundle = $manager->export();
 ```
+
+Resulting bundle shape:
+
+```json
+{
+  "site": {
+    "url": "https://example.com",
+    "environment": "staging"
+  },
+  "schema_version": 2,
+  "type": "my_plugin_manifest",
+  "generated_at": "...",
+  "modules": {
+    "options": {}
+  },
+  "errors": []
+}
+```
+
+`withSchema()` returns the same `Manager` instance for fluent chaining. Calling it is optional — omitting it preserves the original default envelope.
+
+**Reserved keys** — the following keys may not be overridden via `extra` and are silently stripped if present: `schema_version`, `type`, `generated_at`, `modules`, `errors`.
 
 ---
 
