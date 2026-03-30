@@ -257,21 +257,92 @@ class ExportImportUI
      */
     private static function enqueueDiffAssets(): void
     {
-        $version = '0.6.0';
-
         wp_enqueue_style(
             'jsondiffpatch',
-            'https://cdn.jsdelivr.net/npm/jsondiffpatch@' . $version . '/public/formatters-styles/html.css',
+            'https://cdn.jsdelivr.net/npm/jsondiffpatch/lib/formatters/styles/html.min.css',
             [],
-            $version
+            null
         );
+        if (function_exists('wp_add_inline_style')) {
+            wp_add_inline_style('jsondiffpatch', <<<CSS
+#hf-diff-container.hf-diff-codeblock {
+    background: #0f172a;
+    border: 1px solid #1f2937;
+    border-radius: 8px;
+    color: #e5e7eb;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    font-size: 14px;
+    line-height: 1.45;
+    padding: 16px;
+}
+#hf-diff-container.hf-diff-codeblock .jsondiffpatch-delta {
+    color: #e5e7eb;
+}
+#hf-diff-container.hf-diff-codeblock .jsondiffpatch-property-name {
+    color: #d1d5db;
+}
+#hf-diff-container.hf-diff-codeblock .jsondiffpatch-added .jsondiffpatch-property-name,
+#hf-diff-container.hf-diff-codeblock .jsondiffpatch-modified .jsondiffpatch-right-value pre {
+    background: #0f3d24 !important;
+    background-color: #0f3d24 !important;
+    color: #ecfdf5 !important;
+    border-radius: 3px;
+    font-weight: 600;
+    text-shadow: none;
+}
+#hf-diff-container.hf-diff-codeblock .jsondiffpatch-deleted .jsondiffpatch-property-name,
+#hf-diff-container.hf-diff-codeblock .jsondiffpatch-modified .jsondiffpatch-left-value pre {
+    background: #5f1116 !important;
+    background-color: #5f1116 !important;
+    color: #fff1f2 !important;
+    border-radius: 3px;
+    font-weight: 600;
+    text-shadow: none;
+}
+#hf-diff-container.hf-diff-codeblock .jsondiffpatch-added .jsondiffpatch-value pre,
+#hf-diff-container.hf-diff-codeblock .jsondiffpatch-added pre,
+#hf-diff-container.hf-diff-codeblock .jsondiffpatch-textdiff-added {
+    background: #0f3d24 !important;
+    background-color: #0f3d24 !important;
+    color: #ecfdf5 !important;
+    border-radius: 3px;
+    text-shadow: none;
+}
+#hf-diff-container.hf-diff-codeblock .jsondiffpatch-deleted .jsondiffpatch-value pre,
+#hf-diff-container.hf-diff-codeblock .jsondiffpatch-deleted pre,
+#hf-diff-container.hf-diff-codeblock .jsondiffpatch-textdiff-deleted {
+    background: #5f1116 !important;
+    background-color: #5f1116 !important;
+    color: #fff1f2 !important;
+    border-radius: 3px;
+    text-shadow: none;
+}
+#hf-diff-container.hf-diff-codeblock .jsondiffpatch-value pre {
+    color: #e5e7eb;
+}
+textarea.hf-json-codeblock {
+    background: #0f172a;
+    border: 1px solid #1f2937;
+    border-radius: 8px;
+    color: #e5e7eb;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    font-size: 14px;
+    line-height: 1.45;
+    padding: 16px;
+}
+textarea.hf-json-codeblock:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 1px #2563eb;
+}
+CSS);
+        }
 
-        wp_enqueue_script(
+        // Load ESM entrypoint as a module (WP 6.5+).
+        wp_enqueue_script_module(
             'jsondiffpatch',
-            'https://cdn.jsdelivr.net/npm/jsondiffpatch@' . $version . '/dist/jsondiffpatch.umd.js',
+            'https://cdn.jsdelivr.net/npm/jsondiffpatch/+esm',
             [],
-            $version,
-            false
+            null
         );
     }
 
@@ -436,7 +507,7 @@ class ExportImportUI
             <?php if ($exportJson): ?>
                 <h3><?php esc_html_e('Exported JSON', 'hyperfields'); ?></h3>
                 <div class="hyperpress-field-wrapper">
-                    <textarea class="large-text code" readonly rows="12"><?php echo esc_textarea($exportJson); ?></textarea>
+                    <textarea class="large-text code hf-json-codeblock" readonly rows="12"><?php echo esc_textarea($exportJson); ?></textarea>
                 </div>
                 <p>
                     <a href="data:application/json;charset=utf-8,<?php echo rawurlencode($exportJson); ?>"
@@ -492,7 +563,7 @@ class ExportImportUI
             <p><em><?php esc_html_e('Current settings are shown on the left; imported values are on the right.', 'hyperfields'); ?></em></p>
 
             <div class="hyperpress-field-wrapper">
-                <div id="hf-diff-container" class="hyperpress-field-input-wrapper" style="overflow:auto;max-height:600px;">
+                <div id="hf-diff-container" class="hyperpress-field-input-wrapper hf-diff-codeblock" style="overflow:auto;max-height:600px;">
                     <p><?php esc_html_e('Loading diff…', 'hyperfields'); ?></p>
                 </div>
             </div>
@@ -512,29 +583,31 @@ class ExportImportUI
             </form>
 
             <script>
-            (function () {
+            (async function () {
                 var current   = <?php echo wp_json_encode($currentSnapshot, JSON_HEX_TAG | JSON_HEX_AMP); ?>;
                 var incoming  = <?php echo wp_json_encode($incomingData, JSON_HEX_TAG | JSON_HEX_AMP); ?>;
                 var container = document.getElementById('hf-diff-container');
+                var moduleUrl = 'https://cdn.jsdelivr.net/npm/jsondiffpatch/+esm';
+                var formatterUrl = 'https://cdn.jsdelivr.net/npm/jsondiffpatch/formatters/html/+esm';
 
                 if (!container) { return; }
-                if (!window.jsondiffpatch) {
-                    container.innerHTML = '<p><?php echo esc_js(__('Could not load the diff library. Please reload the page and try again.', 'hyperfields')); ?></p>';
-                    return;
-                }
 
                 try {
-                    var delta = jsondiffpatch.diff(current, incoming);
+                    var mod = await import(moduleUrl);
+                    var fmt = await import(formatterUrl);
+                    var delta = mod.diff(current, incoming);
                     if (!delta) {
                         container.innerHTML = '<p><strong><?php echo esc_js(__('No differences found. The uploaded file matches the current settings.', 'hyperfields')); ?></strong></p>';
                         return;
                     }
                     container.innerHTML = '';
-                    var diffHtml = jsondiffpatch.formatters.html.format(delta, current);
+                    var diffHtml = fmt.format(delta, current);
                     container.innerHTML = diffHtml;
-                    jsondiffpatch.formatters.html.hideUnchanged();
+                    if (typeof fmt.hideUnchanged === 'function') {
+                        fmt.hideUnchanged();
+                    }
                 } catch (e) {
-                    container.innerHTML = '<p><?php echo esc_js(__('Could not render diff. Please check the browser console for details.', 'hyperfields')); ?></p>';
+                    container.innerHTML = '<p><?php echo esc_js(__('Could not load or render diff. Please check the browser console for details.', 'hyperfields')); ?></p>';
                     console.error('jsondiffpatch error', e);
                 }
             })();

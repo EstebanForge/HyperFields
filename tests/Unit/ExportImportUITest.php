@@ -493,22 +493,23 @@ class ExportImportUITest extends \PHPUnit\Framework\TestCase
 
     public function testEnqueuePageAssetsCallsEnqueueFunctions(): void
     {
-        // enqueuePageAssets() is the correct hook target — verify it calls wp_enqueue_*.
+        // enqueuePageAssets() is the correct hook target — verify it enqueues diff CSS
+        // and registers the ESM module entrypoint.
         // TemplateLoader::enqueueAssets() bails when HYPERFIELDS_PLUGIN_URL is undefined,
-        // so only the jsondiffpatch calls are observable here.
+        // so only jsondiffpatch enqueue calls are asserted here.
         $styleEnqueued  = false;
-        $scriptEnqueued = false;
+        $moduleEnqueued = false;
 
         Functions\when('wp_enqueue_style')->alias(function () use (&$styleEnqueued) {
             $styleEnqueued = true;
         });
-        Functions\when('wp_enqueue_script')->alias(function () use (&$scriptEnqueued) {
-            $scriptEnqueued = true;
+        Functions\when('wp_enqueue_script_module')->alias(function () use (&$moduleEnqueued) {
+            $moduleEnqueued = true;
         });
 
         ExportImportUI::enqueuePageAssets();
 
         $this->assertTrue($styleEnqueued, 'jsondiffpatch CSS should be enqueued');
-        $this->assertTrue($scriptEnqueued, 'jsondiffpatch JS should be enqueued');
+        $this->assertTrue($moduleEnqueued, 'jsondiffpatch JS module should be enqueued');
     }
 }
