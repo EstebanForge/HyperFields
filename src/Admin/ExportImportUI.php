@@ -129,6 +129,19 @@ class ExportImportUI
     public static function enqueuePageAssets(): void
     {
         TemplateLoader::enqueueAssets();
+        $pluginUrl = defined('HYPERPRESS_PLUGIN_URL') ? HYPERPRESS_PLUGIN_URL : (defined('HYPERFIELDS_PLUGIN_URL') ? HYPERFIELDS_PLUGIN_URL : '');
+        $version   = defined('HYPERPRESS_VERSION') ? HYPERPRESS_VERSION : (defined('HYPERFIELDS_VERSION') ? HYPERFIELDS_VERSION : '0.0.0');
+
+        if ($pluginUrl !== '') {
+            wp_enqueue_script(
+                'hyperpress-admin-options',
+                $pluginUrl . 'assets/js/admin-options.js',
+                [],
+                $version,
+                true
+            );
+        }
+
         self::enqueueDiffAssets();
     }
 
@@ -469,32 +482,71 @@ CSS);
 
             <form method="post">
                 <?php wp_nonce_field('hf_export_action', 'hf_export_nonce'); ?>
-                <fieldset>
+                <fieldset class="hf-export-options">
                     <legend class="screen-reader-text"><?php esc_html_e('Option groups', 'hyperfields'); ?></legend>
-                    <div class="hyperpress-fields-group">
-                        <?php foreach ($options as $optKey => $optLabel): ?>
-                            <div class="hyperpress-field-wrapper">
-                                <div class="hyperpress-field-row">
-                                    <div class="hyperpress-field-label">
+                    <div class="hf-export-options-toolbar">
+                        <div>
+                            <button type="button" class="button button-secondary" data-hf-export-toggle="all">
+                                <?php esc_html_e('Check all', 'hyperfields'); ?>
+                            </button>
+                            <button type="button" class="button button-secondary" data-hf-export-toggle="none">
+                                <?php esc_html_e('Uncheck all', 'hyperfields'); ?>
+                            </button>
+                            <button type="button" class="button button-secondary" data-hf-export-toggle="invert">
+                                <?php esc_html_e('Invert selection', 'hyperfields'); ?>
+                            </button>
+                        </div>
+                        <span class="description"><?php esc_html_e('Scroll inside this list when many options are available.', 'hyperfields'); ?></span>
+                    </div>
+                    <div class="hf-export-options-table-wrap">
+                        <table class="widefat striped fixed hf-export-options-table">
+                            <thead>
+                                <tr>
+                                    <th scope="col"><?php esc_html_e('Option Group', 'hyperfields'); ?></th>
+                                    <th scope="col"><?php esc_html_e('Option Key', 'hyperfields'); ?></th>
+                                    <th scope="col" class="hf-export-option-select-column">
+                                        <?php esc_html_e('Include', 'hyperfields'); ?>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            <?php foreach ($options as $optKey => $optLabel): ?>
+                                <tr>
+                                    <th scope="row">
                                         <label for="hf_opt_<?php echo esc_attr($optKey); ?>">
                                             <?php echo esc_html($optLabel); ?>
                                         </label>
-                                    </div>
-                                    <div class="hyperpress-field-input-wrapper">
-                                        <label>
-                                            <input type="checkbox"
-                                                   id="hf_opt_<?php echo esc_attr($optKey); ?>"
-                                                   name="hf_export_options[]"
-                                                   value="<?php echo esc_attr($optKey); ?>"
-                                                   checked>
-                                            <span class="description">
-                                                <code><?php echo esc_html($optKey); ?></code>
-                                            </span>
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-                        <?php endforeach; ?>
+                                    </th>
+                                    <td>
+                                        <code><?php echo esc_html($optKey); ?></code>
+                                    </td>
+                                    <td class="hf-export-option-checkbox-cell">
+                                        <input type="checkbox"
+                                               id="hf_opt_<?php echo esc_attr($optKey); ?>"
+                                               name="hf_export_options[]"
+                                               value="<?php echo esc_attr($optKey); ?>"
+                                               checked>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="hf-export-options-filter">
+                        <label for="hf_export_options_filter">
+                            <?php esc_html_e('Filter options', 'hyperfields'); ?>
+                        </label>
+                        <div class="hf-export-options-filter-controls">
+                            <input type="search"
+                                   id="hf_export_options_filter"
+                                   class="regular-text"
+                                   data-hf-export-filter
+                                   placeholder="<?php echo esc_attr__('Type to filter by option group or key', 'hyperfields'); ?>">
+                            <button type="button" class="button button-secondary" data-hf-export-filter-clear>
+                                <?php esc_html_e('Clear', 'hyperfields'); ?>
+                            </button>
+                            <span class="description" data-hf-export-filter-count></span>
+                        </div>
                     </div>
                 </fieldset>
                 <p class="submit">
@@ -550,7 +602,7 @@ CSS);
                 </div>
                 <p class="submit">
                     <button type="submit" name="hf_preview_submit" class="button button-secondary">
-                        <?php esc_html_e('Preview Changes', 'hyperfields'); ?>
+                        <?php esc_html_e('Preview Changes (view Diff.)', 'hyperfields'); ?>
                     </button>
                 </p>
             </form>
