@@ -12,10 +12,12 @@ final readonly class ExportImportPageConfig
     /**
      * @param array<string, string> $options
      * @param array<int, string>    $allowedImportOptions
+     * @param array<string, string> $optionGroups
      */
     public function __construct(
         public array $options = [],
         public array $allowedImportOptions = [],
+        public array $optionGroups = [],
         public string $prefix = '',
         public string $title = 'Data Export / Import',
         public string $description = 'Export your settings to JSON or import a previously exported file.',

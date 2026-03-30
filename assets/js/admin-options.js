@@ -78,6 +78,369 @@
         });
     }
 
+    function getRowsByGroup(container) {
+        var map = {};
+        var rows = Array.prototype.slice.call(
+            container.querySelectorAll('.hf-export-options-table tbody tr[data-hf-export-group]')
+        );
+
+        rows.forEach(function (row) {
+            var group = String(row.getAttribute('data-hf-export-group') || '');
+            if (group === '') {
+                return;
+            }
+
+            var checkbox = row.querySelector('input[type="checkbox"][name="hf_export_options[]"]');
+            if (!checkbox) {
+                return;
+            }
+
+            if (!map[group]) {
+                map[group] = [];
+            }
+            map[group].push(checkbox);
+        });
+
+        return map;
+    }
+
+    function updateGroupSummary(container) {
+        var summaryLabel = container.querySelector('[data-hf-export-group-summary-label]');
+        if (!summaryLabel) {
+            return;
+        }
+
+        var selectedGroups = Array.prototype.slice.call(
+            container.querySelectorAll('input[type="checkbox"][data-hf-export-group-toggle]:checked')
+        ).map(function (input) {
+            return String(input.value || '').trim();
+        }).filter(function (value) {
+            return value !== '';
+        });
+
+        if (selectedGroups.length === 0) {
+            summaryLabel.textContent = 'Select option groups';
+            return;
+        }
+
+        if (selectedGroups.length <= 2) {
+            summaryLabel.textContent = selectedGroups.join(', ');
+            return;
+        }
+
+        summaryLabel.textContent = String(selectedGroups.length) + ' groups selected';
+    }
+
+    function syncGroupTogglesFromRows(container) {
+        var rowsByGroup = getRowsByGroup(container);
+        var groupToggles = Array.prototype.slice.call(
+            container.querySelectorAll('input[type="checkbox"][data-hf-export-group-toggle]')
+        );
+
+        groupToggles.forEach(function (toggle) {
+            var group = String(toggle.value || '');
+            var rowCheckboxes = rowsByGroup[group] || [];
+            if (rowCheckboxes.length === 0) {
+                toggle.checked = false;
+                toggle.indeterminate = false;
+                return;
+            }
+
+            var checkedCount = rowCheckboxes.filter(function (rowCheckbox) {
+                return rowCheckbox.checked;
+            }).length;
+
+            toggle.checked = checkedCount === rowCheckboxes.length;
+            toggle.indeterminate = checkedCount > 0 && checkedCount < rowCheckboxes.length;
+        });
+
+        updateGroupSummary(container);
+    }
+
+    function initGroupSelector(container) {
+        var selector = container.querySelector('[data-hf-export-group-selector]');
+        if (!selector) {
+            return;
+        }
+        var summaryButton = selector.querySelector('[data-hf-export-group-summary]');
+        var panel = selector.querySelector('[data-hf-export-group-panel]');
+
+        var rowsByGroup = getRowsByGroup(container);
+        var groupToggles = Array.prototype.slice.call(
+            container.querySelectorAll('input[type="checkbox"][data-hf-export-group-toggle]')
+        );
+
+        function setOpen(isOpen) {
+            selector.classList.toggle('is-open', isOpen);
+            if (panel) {
+                panel.hidden = !isOpen;
+            }
+            if (summaryButton) {
+                summaryButton.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+            }
+        }
+
+        if (summaryButton) {
+            summaryButton.addEventListener('click', function () {
+                var isOpen = selector.classList.contains('is-open');
+                setOpen(!isOpen);
+            });
+
+            document.addEventListener('click', function (event) {
+                if (selector.contains(event.target)) {
+                    return;
+                }
+                setOpen(false);
+            });
+        }
+
+        groupToggles.forEach(function (toggle) {
+            toggle.addEventListener('change', function () {
+                var group = String(toggle.value || '');
+                var rowCheckboxes = rowsByGroup[group] || [];
+
+                rowCheckboxes.forEach(function (rowCheckbox) {
+                    rowCheckbox.checked = toggle.checked;
+                });
+
+                syncGroupTogglesFromRows(container);
+            });
+        });
+
+        container.addEventListener('change', function (event) {
+            var target = event.target;
+            if (!target || target.getAttribute('name') !== 'hf_export_options[]') {
+                return;
+            }
+            syncGroupTogglesFromRows(container);
+        });
+
+        container.__hfSyncGroupSelector = function () {
+            syncGroupTogglesFromRows(container);
+        };
+
+        setOpen(false);
+        syncGroupTogglesFromRows(container);
+    }
+
+    function hasCheckedExportOptions(form) {
+        var checkboxes = Array.prototype.slice.call(
+            form.querySelectorAll('input[type="checkbox"][name="hf_export_options[]"]')
+        );
+        return checkboxes.some(function (checkbox) {
+            return checkbox.checked;
+        });
+    }
+
+    function removeExportValidationNotice(form) {
+        var existing = form.querySelector('.hf-export-validation-error');
+        if (existing) {
+            existing.remove();
+        }
+    }
+
+    function showExportValidationNotice(form, message) {
+        removeExportValidationNotice(form);
+
+        var notice = document.createElement('div');
+        notice.className = 'notice notice-error hf-export-validation-error';
+        notice.innerHTML = '<p>' + String(message || '') + '</p>';
+
+        var target = form.querySelector('.hf-export-options');
+        if (target && target.parentNode) {
+            target.parentNode.insertBefore(notice, target);
+            return;
+        }
+
+        form.insertBefore(notice, form.firstChild);
+    }
+
+    function copyTextToClipboard(text) {
+        if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+            return navigator.clipboard.writeText(text);
+        }
+
+        return new Promise(function (resolve, reject) {
+            try {
+                var temp = document.createElement('textarea');
+                temp.value = text;
+                temp.setAttribute('readonly', 'readonly');
+                temp.style.position = 'fixed';
+                temp.style.top = '-1000px';
+                temp.style.left = '-1000px';
+                document.body.appendChild(temp);
+                temp.select();
+                temp.setSelectionRange(0, temp.value.length);
+                var success = document.execCommand('copy');
+                document.body.removeChild(temp);
+                if (success) {
+                    resolve();
+                    return;
+                }
+                reject(new Error('Copy command failed'));
+            } catch (error) {
+                reject(error);
+            }
+        });
+    }
+
+    function setCopyButtonState(button, state) {
+        var icon = button.querySelector('.dashicons');
+        if (!icon) {
+            return;
+        }
+
+        button.classList.remove('is-copied');
+        icon.classList.remove('dashicons-yes-alt', 'dashicons-warning');
+        icon.classList.add('dashicons-admin-page');
+
+        if (state === 'copied') {
+            button.classList.add('is-copied');
+            icon.classList.remove('dashicons-admin-page');
+            icon.classList.add('dashicons-yes-alt');
+            button.setAttribute('title', 'Copied');
+            button.setAttribute('aria-label', 'Copied');
+            return;
+        }
+
+        if (state === 'error') {
+            icon.classList.remove('dashicons-admin-page');
+            icon.classList.add('dashicons-warning');
+            button.setAttribute('title', 'Copy failed');
+            button.setAttribute('aria-label', 'Copy failed');
+            return;
+        }
+
+        button.setAttribute('title', 'Copy JSON to clipboard');
+        button.setAttribute('aria-label', 'Copy JSON to clipboard');
+    }
+
+    function initJsonCopyButtons() {
+        var copyButtons = Array.prototype.slice.call(document.querySelectorAll('[data-hf-json-copy]'));
+        copyButtons.forEach(function (button) {
+            var wrap = button.closest('.hf-json-copy-wrap');
+            if (!wrap) {
+                return;
+            }
+
+            var textarea = wrap.querySelector('textarea.hf-json-codeblock');
+            if (!textarea) {
+                return;
+            }
+
+            button.addEventListener('click', function () {
+                var jsonText = textarea.value || '';
+                copyTextToClipboard(jsonText).then(function () {
+                    setCopyButtonState(button, 'copied');
+                    window.setTimeout(function () {
+                        setCopyButtonState(button, 'idle');
+                    }, 1400);
+                }).catch(function () {
+                    setCopyButtonState(button, 'error');
+                    window.setTimeout(function () {
+                        setCopyButtonState(button, 'idle');
+                    }, 1800);
+                });
+            });
+        });
+    }
+
+    function initExportModeControls() {
+        var fullGate = document.getElementById('hf-full-export-gate');
+        var developerGate = document.getElementById('hf-developer-export-gate');
+        var fullRadio = document.querySelector('input[name="hf_export_mode"][value="full"]');
+        var developerRadio = document.querySelector('input[name="hf_export_mode"][value="developer"]');
+        var templateRadio = document.querySelector('input[name="hf_export_mode"][value="template"]');
+        var sensitiveRadios = Array.prototype.slice.call(
+            document.querySelectorAll('input[data-hf-sensitive-export-toggle]')
+        );
+
+        if (!fullGate || !fullRadio || !developerRadio || !templateRadio || sensitiveRadios.length === 0) {
+            return;
+        }
+
+        var fullConfirmCheckbox = fullGate.querySelector('input[name="hf_full_export_confirm"]');
+        var developerConfirmCheckbox = developerGate
+            ? developerGate.querySelector('input[name="hf_developer_export_confirm"]')
+            : null;
+
+        var exportForm = fullGate.closest('form');
+        var exportButton = exportForm
+            ? exportForm.querySelector('button[name="hf_export_submit"]')
+            : null;
+
+        if (!fullConfirmCheckbox || !exportButton) {
+            return;
+        }
+
+        function resetSensitiveConfirmations() {
+            fullConfirmCheckbox.checked = false;
+            if (developerConfirmCheckbox) {
+                developerConfirmCheckbox.checked = false;
+            }
+        }
+
+        function updateExportButtonState() {
+            var templateSelected = !!templateRadio.checked;
+            var fullSelected = !!fullRadio.checked;
+            var developerSelected = !!developerRadio.checked;
+
+            if (templateSelected) {
+                exportButton.disabled = false;
+                exportButton.classList.remove('disabled');
+                return;
+            }
+
+            var fullConfirmed = !!fullConfirmCheckbox.checked;
+            var developerConfirmed = developerSelected
+                ? !!(developerConfirmCheckbox && developerConfirmCheckbox.checked)
+                : true;
+            var enabled = (fullSelected || developerSelected) && fullConfirmed && developerConfirmed;
+
+            exportButton.disabled = !enabled;
+            exportButton.classList.toggle('disabled', !enabled);
+        }
+
+        function updateGateState() {
+            var fullSelected = !!fullRadio.checked;
+            var developerSelected = !!developerRadio.checked;
+
+            fullGate.style.display = (fullSelected || developerSelected) ? 'block' : 'none';
+            if (developerGate) {
+                developerGate.style.display = developerSelected ? 'block' : 'none';
+            }
+
+            updateExportButtonState();
+        }
+
+        sensitiveRadios.forEach(function (radio) {
+            radio.addEventListener('change', function () {
+                if (!radio.checked) {
+                    return;
+                }
+                resetSensitiveConfirmations();
+                updateGateState();
+            });
+        });
+
+        templateRadio.addEventListener('change', function () {
+            if (!templateRadio.checked) {
+                return;
+            }
+            updateGateState();
+        });
+
+        fullConfirmCheckbox.addEventListener('change', updateExportButtonState);
+        if (developerConfirmCheckbox) {
+            developerConfirmCheckbox.addEventListener('change', updateExportButtonState);
+        }
+
+        if (fullRadio.checked || developerRadio.checked) {
+            resetSensitiveConfirmations();
+        }
+        updateGateState();
+    }
+
     document.addEventListener('click', function (event) {
         var button = event.target.closest('[data-hf-export-toggle]');
         if (!button) {
@@ -92,26 +455,88 @@
         var action = button.getAttribute('data-hf-export-toggle');
         if (action === 'all') {
             setChecked(fieldset, true);
+            if (typeof fieldset.__hfSyncGroupSelector === 'function') {
+                fieldset.__hfSyncGroupSelector();
+            }
             return;
         }
 
         if (action === 'none') {
             setChecked(fieldset, false);
+            if (typeof fieldset.__hfSyncGroupSelector === 'function') {
+                fieldset.__hfSyncGroupSelector();
+            }
             return;
         }
 
         if (action === 'invert') {
             invertChecked(fieldset);
+            if (typeof fieldset.__hfSyncGroupSelector === 'function') {
+                fieldset.__hfSyncGroupSelector();
+            }
         }
     });
 
-    document.addEventListener('DOMContentLoaded', function () {
-        var exportGroups = Array.prototype.slice.call(document.querySelectorAll('.hf-export-options'));
-        exportGroups.forEach(initFilter);
+    document.addEventListener('click', function (event) {
+        var row = event.target.closest('.hf-export-options-table tbody tr');
+        if (!row) { return; }
 
-        var exportButton = document.querySelector('[name="hf_export_submit"], [name="portus_export_submit"]');
+        var checkbox = row.querySelector('input[type="checkbox"][name="hf_export_options[]"]');
+        if (!checkbox) { return; }
+
+        // Let native checkbox clicks pass through untouched
+        if (event.target === checkbox) { return; }
+
+        checkbox.checked = !checkbox.checked;
+        checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    document.addEventListener('DOMContentLoaded', function () {
+        initJsonCopyButtons();
+        initExportModeControls();
+
+        var exportGroups = Array.prototype.slice.call(document.querySelectorAll('.hf-export-options'));
+        exportGroups.forEach(function (container) {
+            initFilter(container);
+            initGroupSelector(container);
+        });
+
+        var exportButton = document.querySelector('[name="hf_export_submit"]');
         if (exportButton) {
-            exportButton.closest('form').addEventListener('submit', function () {
+            exportButton.closest('form').addEventListener('submit', function (event) {
+                var form = exportButton.closest('form');
+                if (!form) {
+                    return;
+                }
+
+                removeExportValidationNotice(form);
+
+                var developerModeSelected = !!form.querySelector(
+                    'input[name="hf_export_mode"][value="developer"]:checked'
+                );
+
+                if (developerModeSelected && !hasCheckedExportOptions(form)) {
+                    var firstExportOption = form.querySelector(
+                        'input[type="checkbox"][name="hf_export_options[]"]'
+                    );
+                    if (firstExportOption) {
+                        firstExportOption.checked = true;
+                    }
+                }
+
+                if (!developerModeSelected && !hasCheckedExportOptions(form)) {
+                    showExportValidationNotice(
+                        form,
+                        'Please select at least one option group before exporting.'
+                    );
+                    var filterInput = form.querySelector('[data-hf-export-filter]');
+                    if (filterInput) {
+                        filterInput.focus();
+                    }
+                    event.preventDefault();
+                    return;
+                }
+
                 var spinner = exportButton.closest('.submit').querySelector('.spinner');
                 // Defer disabling until after the browser has serialized the form,
                 // so the button name/value is included in the POST payload.
