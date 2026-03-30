@@ -89,6 +89,7 @@ class ExportImportUI
         ?callable $exporter = null,
         ?callable $previewer = null,
         ?callable $importer = null,
+        ?string $exportFormExtras = null,
     ): void {
         if (empty($allowedImportOptions)) {
             $allowedImportOptions = array_keys($options);
@@ -111,7 +112,7 @@ class ExportImportUI
             $title,
             $capability,
             $pageSlug,
-            static function () use ($options, $allowedImportOptions, $prefix, $title, $description, $exporter, $previewer, $importer): void {
+            static function () use ($options, $allowedImportOptions, $prefix, $title, $description, $exporter, $previewer, $importer, $exportFormExtras): void {
                 echo self::render(
                     options:              $options,
                     allowedImportOptions: $allowedImportOptions,
@@ -121,6 +122,7 @@ class ExportImportUI
                     exporter:             $exporter,
                     previewer:            $previewer,
                     importer:             $importer,
+                    exportFormExtras:     $exportFormExtras,
                 );
             }
         );
@@ -185,6 +187,7 @@ class ExportImportUI
      * @param callable|null $importer             Optional custom import callable. Replaces ExportImport::importOptions().
      *                                            Signature: fn(string $jsonString, array $allowedImportOptions, string $prefix): array
      *                                            Must return: {success: bool, message: string}
+     * @param string|null $exportFormExtras       Optional raw HTML injected into the export form before `<p class="submit">`.
      * @return string HTML ready to be echo'd inside a WP admin page callback.
      */
     public static function render(
@@ -196,6 +199,7 @@ class ExportImportUI
         ?callable $exporter = null,
         ?callable $previewer = null,
         ?callable $importer = null,
+        ?string $exportFormExtras = null,
     ): string {
         if (empty($allowedImportOptions)) {
             $allowedImportOptions = array_keys($options);
@@ -292,6 +296,7 @@ class ExportImportUI
             incomingData:        $incomingData,
             importMessage:       $importMessage,
             importSuccess:       $importSuccess,
+            exportFormExtras:    $exportFormExtras,
         );
 
         return (string) ob_get_clean();
@@ -510,7 +515,8 @@ CSS);
         array $currentSnapshot,
         array $incomingData,
         string $importMessage,
-        bool $importSuccess
+        bool $importSuccess,
+        ?string $exportFormExtras = null,
     ): void {
         $hasDiff   = $previewTransientKey !== '' && !empty($incomingData);
         $cancelUrl = admin_url('admin.php?page=' . esc_attr(sanitize_text_field(wp_unslash($_GET['page'] ?? ''))));
@@ -552,6 +558,24 @@ CSS);
                             </button>
                         </div>
                     </div>
+                    <div class="hf-export-options-filter">
+                        <div class="hf-export-options-filter-header">
+                            <label for="hf_export_options_filter">
+                                <?php esc_html_e('Filter options', 'hyperfields'); ?>
+                            </label>
+                            <span class="description" data-hf-export-filter-count></span>
+                        </div>
+                        <div class="hf-export-options-filter-controls" style="margin-bottom: 1rem;">
+                            <input type="search"
+                                   id="hf_export_options_filter"
+                                   class="regular-text"
+                                   data-hf-export-filter
+                                   placeholder="<?php echo esc_attr__('Type to filter by option group or key', 'hyperfields'); ?>">
+                            <button type="button" class="button button-secondary" data-hf-export-filter-clear>
+                                <?php esc_html_e('Clear', 'hyperfields'); ?>
+                            </button>
+                        </div>
+                    </div>
                     <div class="hf-export-options-table-wrap">
                         <table class="widefat striped fixed hf-export-options-table">
                             <thead>
@@ -586,25 +610,12 @@ CSS);
                             </tbody>
                         </table>
                     </div>
-                    <div class="hf-export-options-filter">
-                        <div class="hf-export-options-filter-header">
-                            <label for="hf_export_options_filter">
-                                <?php esc_html_e('Filter options', 'hyperfields'); ?>
-                            </label>
-                            <span class="description" data-hf-export-filter-count></span>
-                        </div>
-                        <div class="hf-export-options-filter-controls">
-                            <input type="search"
-                                   id="hf_export_options_filter"
-                                   class="regular-text"
-                                   data-hf-export-filter
-                                   placeholder="<?php echo esc_attr__('Type to filter by option group or key', 'hyperfields'); ?>">
-                            <button type="button" class="button button-secondary" data-hf-export-filter-clear>
-                                <?php esc_html_e('Clear', 'hyperfields'); ?>
-                            </button>
-                        </div>
-                    </div>
                 </fieldset>
+
+                <?php if ($exportFormExtras !== null): ?>
+                    <?php echo $exportFormExtras; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Caller controls HTML. ?>
+                <?php endif; ?>
+
                 <p class="submit">
                     <button type="submit" name="hf_export_submit" class="button button-primary">
                         <?php esc_html_e('Export to JSON', 'hyperfields'); ?>
