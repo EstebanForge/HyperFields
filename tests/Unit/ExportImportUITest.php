@@ -493,23 +493,17 @@ class ExportImportUITest extends \PHPUnit\Framework\TestCase
 
     public function testEnqueuePageAssetsCallsEnqueueFunctions(): void
     {
-        // enqueuePageAssets() is the correct hook target — verify it enqueues diff CSS
-        // and registers the ESM module entrypoint.
-        // TemplateLoader::enqueueAssets() bails when HYPERFIELDS_PLUGIN_URL is undefined,
-        // so only jsondiffpatch enqueue calls are asserted here.
-        $styleEnqueued  = false;
-        $moduleEnqueued = false;
+        // enqueuePageAssets() calls enqueueDiffAssets() which appends CSS via
+        // wp_add_inline_style. TemplateLoader::enqueueAssets() bails when
+        // HYPERFIELDS_PLUGIN_URL is undefined, so only the inline-style call is asserted.
+        $inlineStyleEnqueued = false;
 
-        Functions\when('wp_enqueue_style')->alias(function () use (&$styleEnqueued) {
-            $styleEnqueued = true;
-        });
-        Functions\when('wp_enqueue_script_module')->alias(function () use (&$moduleEnqueued) {
-            $moduleEnqueued = true;
+        Functions\when('wp_add_inline_style')->alias(function () use (&$inlineStyleEnqueued) {
+            $inlineStyleEnqueued = true;
         });
 
         ExportImportUI::enqueuePageAssets();
 
-        $this->assertTrue($styleEnqueued, 'jsondiffpatch CSS should be enqueued');
-        $this->assertTrue($moduleEnqueued, 'jsondiffpatch JS module should be enqueued');
+        $this->assertTrue($inlineStyleEnqueued, 'diff CSS should be added via wp_add_inline_style');
     }
 }

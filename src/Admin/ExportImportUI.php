@@ -160,7 +160,7 @@ class ExportImportUI
                 $pluginUrl . 'assets/js/admin-options.js',
                 [],
                 $version,
-                true
+                false
             );
         }
 
@@ -592,10 +592,8 @@ CSS);
         $cancelUrl  = admin_url('admin.php?page=' . esc_attr(sanitize_text_field(wp_unslash($_GET['page'] ?? ''))));
         $groupLabels = [];
         foreach ($options as $optKey => $_optLabel) {
-            $groupLabel = (string) ($optionGroups[$optKey] ?? '');
-            if ($groupLabel !== '') {
-                $groupLabels[$groupLabel] = true;
-            }
+            $groupLabel = (string) ($optionGroups[$optKey] ?? 'Other');
+            $groupLabels[$groupLabel] = true;
         }
         $groupLabels = array_keys($groupLabels);
         sort($groupLabels, SORT_NATURAL | SORT_FLAG_CASE);
@@ -654,67 +652,18 @@ CSS);
                 if (!raw || !viewer) { return; }
 
                 if (copyBtn) {
-                    var copyIcon = copyBtn.querySelector('.dashicons');
-                    var copyLabel = '<?php echo esc_js(__('Copy JSON', 'hyperfields')); ?>';
-                    var copiedLabel = '<?php echo esc_js(__('Copied!', 'hyperfields')); ?>';
-                    var errorLabel = '<?php echo esc_js(__('Failed', 'hyperfields')); ?>';
-
-                    function setCopyState(state) {
-                        copyBtn.classList.remove('is-copied');
-                        if (copyIcon) {
-                            copyIcon.classList.remove('dashicons-admin-page', 'dashicons-yes-alt', 'dashicons-warning');
-                        }
-                        if (state === 'copied') {
-                            copyBtn.classList.add('is-copied');
-                            if (copyIcon) { copyIcon.classList.add('dashicons-yes-alt'); }
-                            copyBtn.lastChild.textContent = ' ' + copiedLabel;
-                        } else if (state === 'error') {
-                            if (copyIcon) { copyIcon.classList.add('dashicons-warning'); }
-                            copyBtn.lastChild.textContent = ' ' + errorLabel;
-                        } else {
-                            if (copyIcon) { copyIcon.classList.add('dashicons-admin-page'); }
-                            copyBtn.lastChild.textContent = ' ' + copyLabel;
-                        }
-                    }
-
                     copyBtn.addEventListener('click', function () {
                         navigator.clipboard.writeText(raw.value).then(function () {
-                            setCopyState('copied');
-                            setTimeout(function () { setCopyState('idle'); }, 1500);
+                            setCopyButtonState(copyBtn, 'copied');
+                            setTimeout(function () { setCopyButtonState(copyBtn, 'idle'); }, 1500);
                         }).catch(function () {
-                            setCopyState('error');
-                            setTimeout(function () { setCopyState('idle'); }, 1800);
+                            setCopyButtonState(copyBtn, 'error');
+                            setTimeout(function () { setCopyButtonState(copyBtn, 'idle'); }, 1800);
                         });
                     });
                 }
 
-                function initViewer() {
-                    try {
-                        var data = JSON.parse(raw.value);
-                        viewer.innerHTML = '';
-                        new JsonViewer({
-                            value:           data,
-                            theme:           'dark',
-                            defaultInspectDepth: 2,
-                            enableClipboard: false,
-                        }).render(viewer);
-                    } catch (e) {
-                        viewer.innerHTML = '<pre style="color:#e5e7eb;margin:0;">' + raw.value.replace(/</g, '&lt;') + '</pre>';
-                        console.error('hf-json-viewer error', e);
-                    }
-                }
-
-                if (typeof JsonViewer !== 'undefined') {
-                    initViewer();
-                } else {
-                    var s    = document.createElement('script');
-                    s.src    = 'https://cdn.jsdelivr.net/npm/@textea/json-viewer@3';
-                    s.onload = initViewer;
-                    s.onerror = function () {
-                        viewer.innerHTML = '<pre style="color:#e5e7eb;margin:0;">' + raw.value.replace(/</g, '&lt;') + '</pre>';
-                    };
-                    document.head.appendChild(s);
-                }
+                hfJsonViewerInit(raw, viewer);
             });
             </script>
 
@@ -794,7 +743,7 @@ CSS);
                             <thead>
                                 <tr>
                                     <th scope="col"><?php esc_html_e('Group', 'hyperfields'); ?></th>
-                                    <th scope="col"><?php esc_html_e('Option Group', 'hyperfields'); ?></th>
+                                    <th scope="col"><?php esc_html_e('Description', 'hyperfields'); ?></th>
                                     <th scope="col"><?php esc_html_e('Option Key', 'hyperfields'); ?></th>
                                     <th scope="col" class="hf-export-option-select-column">
                                         <?php esc_html_e('Include', 'hyperfields'); ?>
@@ -904,7 +853,7 @@ CSS);
                     <label style="display:block;margin-top:8px;cursor:pointer;">
                         <input type="checkbox"
                                id="hf_import_confirm_destructive"
-                               onchange="document.getElementById('hf_confirm_submit_btn').disabled=!this.checked;">
+                               data-hf-import-confirm>
                         <span style="font-weight:600;">
                             <?php esc_html_e('I understand performing an import will overwrite existing settings and cannot be undone.', 'hyperfields'); ?>
                         </span>
@@ -935,71 +884,52 @@ CSS);
                 var noChange = '<p style="padding:16px;"><strong><?php echo esc_js(__('No differences found. The uploaded file matches the current settings.', 'hyperfields')); ?></strong></p>';
                 var errMsg   = '<p style="padding:16px;"><?php echo esc_js(__('Could not load or render diff. Please check the browser console for details.', 'hyperfields')); ?></p>';
 
-                function loadScript(src, id, cb) {
-                    if (document.getElementById(id)) { cb(); return; }
-                    var s  = document.createElement('script');
-                    s.id   = id;
-                    s.src  = src;
-                    s.onload  = cb;
-                    s.onerror = function () { container.innerHTML = errMsg; console.error('hf-diff: failed to load ' + src); };
-                    document.head.appendChild(s);
-                }
-
-                function loadCss(href, id) {
-                    if (document.getElementById(id)) { return; }
-                    var l  = document.createElement('link');
-                    l.id   = id;
-                    l.rel  = 'stylesheet';
-                    l.href = href;
-                    document.head.appendChild(l);
-                }
-
-                function render() {
-                    try {
-                        var leftStr  = JSON.stringify(current,  null, 2);
-                        var rightStr = JSON.stringify(incoming, null, 2);
-
-                        var unifiedDiff = Diff.createTwoFilesPatch(
-                            'current', 'incoming',
-                            leftStr, rightStr,
-                            '', '',
-                            { context: 4 }
-                        );
-
-                        if (unifiedDiff.split('\n').slice(2).every(function (l) { return l[0] !== '+' && l[0] !== '-'; })) {
-                            container.innerHTML = noChange;
-                            return;
-                        }
-
-                        loadCss('https://cdn.jsdelivr.net/npm/diff2html@3.4.56/bundles/css/diff2html.min.css', 'hf-diff2html-css');
-                        loadCss('https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css', 'hf-hljs-css');
-
-                        var ui = new Diff2HtmlUI(container, unifiedDiff, {
-                            drawFileList:       false,
-                            matching:           'lines',
-                            outputFormat:       'side-by-side',
-                            diffStyle:          'char',
-                            colorScheme:        'dark',
-                            synchronisedScroll: true,
-                            highlight:          true,
-                        });
-                        ui.draw();
-                        ui.highlightCode();
-                        ui.synchronisedScroll();
-                    } catch (e) {
-                        container.innerHTML = errMsg;
-                        console.error('hf-diff error', e);
-                    }
-                }
-
-                loadScript(
+                hfDiffLoadScript(
                     'https://cdn.jsdelivr.net/npm/diff@7/dist/diff.min.js',
                     'hf-diff-js',
+                    container,
                     function () {
-                        loadScript(
+                        hfDiffLoadScript(
                             'https://cdn.jsdelivr.net/npm/diff2html@3.4.56/bundles/js/diff2html-ui.min.js',
                             'hf-diff2html-ui-js',
-                            render
+                            container,
+                            function () {
+                                try {
+                                    var leftStr  = JSON.stringify(current,  null, 2);
+                                    var rightStr = JSON.stringify(incoming, null, 2);
+
+                                    var unifiedDiff = Diff.createTwoFilesPatch(
+                                        'current', 'incoming',
+                                        leftStr, rightStr,
+                                        '', '',
+                                        { context: 4 }
+                                    );
+
+                                    if (unifiedDiff.split('\n').slice(2).every(function (l) { return l[0] !== '+' && l[0] !== '-'; })) {
+                                        container.innerHTML = noChange;
+                                        return;
+                                    }
+
+                                    hfDiffLoadCss('https://cdn.jsdelivr.net/npm/diff2html@3.4.56/bundles/css/diff2html.min.css', 'hf-diff2html-css');
+                                    hfDiffLoadCss('https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css', 'hf-hljs-css');
+
+                                    var ui = new Diff2HtmlUI(container, unifiedDiff, {
+                                        drawFileList:       false,
+                                        matching:           'lines',
+                                        outputFormat:       'side-by-side',
+                                        diffStyle:          'char',
+                                        colorScheme:        'dark',
+                                        synchronisedScroll: true,
+                                        highlight:          true,
+                                    });
+                                    ui.draw();
+                                    ui.highlightCode();
+                                    ui.synchronisedScroll();
+                                } catch (e) {
+                                    container.innerHTML = errMsg;
+                                    console.error('hf-diff error', e);
+                                }
+                            }
                         );
                     }
                 );
