@@ -256,32 +256,7 @@
     }
 
     function copyTextToClipboard(text) {
-        if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
-            return navigator.clipboard.writeText(text);
-        }
-
-        return new Promise(function (resolve, reject) {
-            try {
-                var temp = document.createElement('textarea');
-                temp.value = text;
-                temp.setAttribute('readonly', 'readonly');
-                temp.style.position = 'fixed';
-                temp.style.top = '-1000px';
-                temp.style.left = '-1000px';
-                document.body.appendChild(temp);
-                temp.select();
-                temp.setSelectionRange(0, temp.value.length);
-                var success = document.execCommand('copy');
-                document.body.removeChild(temp);
-                if (success) {
-                    resolve();
-                    return;
-                }
-                reject(new Error('Copy command failed'));
-            } catch (error) {
-                reject(error);
-            }
-        });
+        return navigator.clipboard.writeText(text);
     }
 
     function setCopyButtonState(button, state) {
@@ -491,9 +466,78 @@
         checkbox.dispatchEvent(new Event('change', { bubbles: true }));
     });
 
+    // -------------------------------------------------------------------------
+    // Diff viewer helpers — used by the inline <script> in the diff preview page.
+    // Exposed on window so the inline script (which runs in page scope) can call them.
+    // -------------------------------------------------------------------------
+
+    window.setCopyButtonState = setCopyButtonState;
+
+    window.hfDiffLoadScript = function (src, id, container, cb) {
+        if (document.getElementById(id)) { cb(); return; }
+        var s    = document.createElement('script');
+        s.id     = id;
+        s.src    = src;
+        s.onload = cb;
+        s.onerror = function () {
+            container.innerHTML = '<p style="padding:16px;">Could not load diff library. Please check your network connection.</p>';
+            console.error('hf-diff: failed to load ' + src);
+        };
+        document.head.appendChild(s);
+    };
+
+    window.hfDiffLoadCss = function (href, id) {
+        if (document.getElementById(id)) { return; }
+        var l  = document.createElement('link');
+        l.id   = id;
+        l.rel  = 'stylesheet';
+        l.href = href;
+        document.head.appendChild(l);
+    };
+
+    window.hfJsonViewerInit = function (rawEl, viewerEl) {
+        function render() {
+            try {
+                var data = JSON.parse(rawEl.value);
+                viewerEl.innerHTML = '';
+                new JsonViewer({
+                    value:               data,
+                    theme:               'dark',
+                    defaultInspectDepth: 2,
+                    enableClipboard:     false,
+                }).render(viewerEl);
+            } catch (e) {
+                viewerEl.innerHTML = '<pre style="color:#e5e7eb;margin:0;">' + rawEl.value.replace(/</g, '&lt;') + '</pre>';
+                console.error('hf-json-viewer error', e);
+            }
+        }
+
+        if (typeof JsonViewer !== 'undefined') {
+            render();
+        } else {
+            var s     = document.createElement('script');
+            s.src     = 'https://cdn.jsdelivr.net/npm/@textea/json-viewer@3';
+            s.onload  = render;
+            s.onerror = function () {
+                viewerEl.innerHTML = '<pre style="color:#e5e7eb;margin:0;">' + rawEl.value.replace(/</g, '&lt;') + '</pre>';
+            };
+            document.head.appendChild(s);
+        }
+    };
+
+    // -------------------------------------------------------------------------
+
     document.addEventListener('DOMContentLoaded', function () {
         initJsonCopyButtons();
         initExportModeControls();
+
+        var importConfirm = document.getElementById('hf_import_confirm_destructive');
+        var confirmBtn    = document.getElementById('hf_confirm_submit_btn');
+        if (importConfirm && confirmBtn) {
+            importConfirm.addEventListener('change', function () {
+                confirmBtn.disabled = !importConfirm.checked;
+            });
+        }
 
         var exportGroups = Array.prototype.slice.call(document.querySelectorAll('.hf-export-options'));
         exportGroups.forEach(function (container) {
