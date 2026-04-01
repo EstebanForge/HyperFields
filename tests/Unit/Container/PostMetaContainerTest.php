@@ -261,7 +261,7 @@ class PostMetaContainerTest extends \PHPUnit\Framework\TestCase
 
         Functions\expect('do_action')
             ->once()
-            ->with('hyperpress/fields/post_meta_container_saved', 123, $this->container);
+            ->with('hyperfields/post_meta_container_saved', 123, $this->container);
 
         $this->container->save();
     }

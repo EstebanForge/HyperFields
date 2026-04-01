@@ -51,7 +51,10 @@ class ExportImportTest extends \PHPUnit\Framework\TestCase
         $this->assertSame('hyperfields_export', $data['type']);
         $this->assertArrayHasKey('options', $data);
         $this->assertArrayHasKey('my_option', $data['options']);
-        $this->assertSame('val1', $data['options']['my_option']['key1']);
+        // Typed-node envelope format
+        $this->assertArrayHasKey('value', $data['options']['my_option']);
+        $this->assertArrayHasKey('_schema', $data['options']['my_option']);
+        $this->assertSame('val1', $data['options']['my_option']['value']['key1']);
     }
 
     public function testExportOptionsWithPrefixFilter(): void
@@ -65,7 +68,7 @@ class ExportImportTest extends \PHPUnit\Framework\TestCase
         $json = ExportImport::exportOptions(['my_option'], 'myplugin_');
         $data = json_decode($json, true);
 
-        $exported = $data['options']['my_option'];
+        $exported = $data['options']['my_option']['value'];
         $this->assertArrayHasKey('myplugin_name', $exported);
         $this->assertArrayHasKey('myplugin_email', $exported);
         $this->assertArrayNotHasKey('other_setting', $exported);
@@ -99,7 +102,10 @@ class ExportImportTest extends \PHPUnit\Framework\TestCase
         $data = json_decode($json, true);
 
         $this->assertArrayHasKey('my_scalar_option', $data['options']);
-        $this->assertSame('scalar_value', $data['options']['my_scalar_option']);
+        // Typed-node envelope for scalar
+        $this->assertArrayHasKey('value', $data['options']['my_scalar_option']);
+        $this->assertSame('scalar_value', $data['options']['my_scalar_option']['value']);
+        $this->assertSame('string', $data['options']['my_scalar_option']['_schema']['type']);
     }
 
     public function testExportOptionsSkipsEmptyOptionName(): void
@@ -119,14 +125,44 @@ class ExportImportTest extends \PHPUnit\Framework\TestCase
 
     private function makeExportJson(array $options, string $prefix = ''): string
     {
+        // Wrap values in typed-node envelope format (new in 1.1.8)
+        $wrapped = [];
+        foreach ($options as $key => $value) {
+            $wrapped[$key] = $this->wrapTypedNode($value);
+        }
+
         return (string) json_encode([
             'version'     => '1.0',
             'type'        => 'hyperfields_export',
             'prefix'      => $prefix,
             'exported_at' => '2024-01-01 00:00:00',
             'site_url'    => 'https://example.com',
-            'options'     => $options,
+            'options'     => $wrapped,
         ]);
+    }
+
+    /**
+     * Wrap a value in the typed-node envelope format.
+     * Mimics ExportImport::wrapTypedNode() for testing.
+     */
+    private function wrapTypedNode(mixed $value): array
+    {
+        return [
+            'value'   => $value,
+            '_schema' => ['type' => $this->detectType($value)],
+        ];
+    }
+
+    private function detectType(mixed $value): string
+    {
+        return match (true) {
+            is_int($value) => 'integer',
+            is_float($value) => 'number',
+            is_bool($value) => 'boolean',
+            is_array($value) => 'array',
+            is_string($value) => 'string',
+            default => 'string',
+        };
     }
 
     public function testImportOptionsSuccess(): void

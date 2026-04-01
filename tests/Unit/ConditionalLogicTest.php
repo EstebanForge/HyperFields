@@ -300,7 +300,7 @@ class ConditionalLogicTest extends \PHPUnit\Framework\TestCase
         // Use when to stub the return value
         Functions\when('apply_filters')
             ->alias(function ($hook, $default, $value, $op, $compare) {
-                if ($hook === 'hyperpress/fields/conditional_logic_evaluate' && $op === 'CUSTOM_OP') {
+                if ($hook === 'hyperfields/conditional_logic_evaluate' && $op === 'CUSTOM_OP') {
                     return true;
                 }
                 return $default;

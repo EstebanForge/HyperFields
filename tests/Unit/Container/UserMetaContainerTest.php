@@ -256,7 +256,7 @@ class UserMetaContainerTest extends \PHPUnit\Framework\TestCase
 
         Functions\expect('do_action')
             ->once()
-            ->with('hyperpress/fields/user_meta_container_saved', 123, $this->container);
+            ->with('hyperfields/user_meta_container_saved', 123, $this->container);
 
         $this->container->save();
     }
@@ -281,7 +281,7 @@ class UserMetaContainerTest extends \PHPUnit\Framework\TestCase
 
         Functions\expect('do_action')
             ->once()
-            ->with('hyperpress/fields/user_meta_container_saved', 123, $this->container);
+            ->with('hyperfields/user_meta_container_saved', 123, $this->container);
 
         $this->container->save();
     }
@@ -427,7 +427,7 @@ class UserMetaContainerTest extends \PHPUnit\Framework\TestCase
 
         Functions\expect('do_action')
             ->once()
-            ->with('hyperpress/fields/user_meta_container_saved', 123, $this->container);
+            ->with('hyperfields/user_meta_container_saved', 123, $this->container);
 
         $this->container->_save(123);
 

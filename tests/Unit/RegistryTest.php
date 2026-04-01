@@ -256,7 +256,7 @@ class RegistryTest extends \PHPUnit\Framework\TestCase
         $action_triggered = false;
         Functions\expect('do_action')
             ->once()
-            ->with('hyperpress/fields/register')
+            ->with('hyperfields/register')
             ->andReturnUsing(function() use (&$action_triggered) {
                 $action_triggered = true;
             });
