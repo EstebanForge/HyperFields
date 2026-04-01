@@ -9,6 +9,10 @@ plugin itself.
 Call it once, after your autoloader is loaded and before any HyperFields class
 is used. The method is idempotent — repeated calls are no-ops.
 
+During bootstrap, HyperFields also initializes transfer-audit logging hooks
+automatically (`HyperFields\Transfer\AuditLogger`). No extra setup is required
+to start recording export/import audit events.
+
 ```php
 $autoload = plugin_dir_path(__FILE__) . 'vendor/autoload.php';
 if (file_exists($autoload)) {

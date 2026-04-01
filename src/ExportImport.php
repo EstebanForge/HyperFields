@@ -44,6 +44,17 @@ class ExportImport
 
     /** @var array<int, string> */
     private const SUPPORTED_IMPORT_MODES = ['merge', 'replace'];
+    private const STRATEGY_KEY = '__strategy';
+    private const SUPPORTED_NODE_STRATEGIES = [
+        'merge',
+        'replace',
+        'override',
+        'migrate',
+        'create',
+        'skip',
+        'delete',
+        'recreate',
+    ];
 
     /**
      * Export one or more WordPress option groups to a JSON string.
@@ -82,20 +93,36 @@ class ExportImport
             }
 
             $schema = $schemaMap[$optionName] ?? null;
-            $data[$optionName] = self::wrapTypedNode($value, $schema);
+            $node = self::wrapTypedNode($value, $schema);
+            $node = self::attachExportStrategy($node, $optionName, $value);
+            $data[$optionName] = $node;
         }
 
-        $encoded = wp_json_encode(
-            [
-                'version'     => self::SCHEMA_VERSION,
-                'type'        => 'hyperfields_export',
-                'prefix'      => $prefix,
-                'exported_at' => current_time('mysql'),
-                'site_url'    => get_site_url(),
-                'options'     => $data,
-            ],
-            JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE
-        );
+        $payload = [
+            'version'     => self::SCHEMA_VERSION,
+            'type'        => 'hyperfields_export',
+            'prefix'      => $prefix,
+            'exported_at' => current_time('mysql'),
+            'site_url'    => get_site_url(),
+            'options'     => $data,
+        ];
+
+        $encoded = wp_json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        $result = [
+            'success' => is_string($encoded),
+            'message' => is_string($encoded) ? 'Options exported successfully.' : 'Failed to encode export payload.',
+        ];
+
+        /**
+         * Fires after HyperFields has finished exporting options.
+         *
+         * @param array $result     Export result metadata.
+         * @param array $payload    Decoded payload prior to JSON encoding.
+         * @param array $optionNames Original requested option names.
+         * @param string $prefix    Prefix filter applied.
+         * @param array $schemaMap  Per-option schema map used for typed-node envelopes.
+         */
+        do_action('hyperfields/export/after', $result, $payload, $optionNames, $prefix, $schemaMap);
 
         return $encoded !== false ? $encoded : '{}';
     }
@@ -118,17 +145,26 @@ class ExportImport
     public static function importOptions(string $jsonString, array $allowedOptionNames = [], string $prefix = '', array $options = []): array
     {
         if ($jsonString === '') {
-            return ['success' => false, 'message' => 'Empty import data.'];
+            $result = ['success' => false, 'message' => 'Empty import data.'];
+            self::dispatchImportAfter($result, [], $allowedOptionNames, $prefix, $options);
+
+            return $result;
         }
 
         $decoded = json_decode($jsonString, true);
 
         if (json_last_error() !== JSON_ERROR_NONE) {
-            return ['success' => false, 'message' => 'Invalid JSON: ' . json_last_error_msg()];
+            $result = ['success' => false, 'message' => 'Invalid JSON: ' . json_last_error_msg()];
+            self::dispatchImportAfter($result, [], $allowedOptionNames, $prefix, $options);
+
+            return $result;
         }
 
         if (!is_array($decoded) || !isset($decoded['options']) || !is_array($decoded['options'])) {
-            return ['success' => false, 'message' => 'Invalid export format. Expected a "options" key with an array value.'];
+            $result = ['success' => false, 'message' => 'Invalid export format. Expected a "options" key with an array value.'];
+            self::dispatchImportAfter($result, is_array($decoded) ? $decoded : [], $allowedOptionNames, $prefix, $options);
+
+            return $result;
         }
 
         $backupKeys    = [];
@@ -154,6 +190,17 @@ class ExportImport
             $schemaError = self::validateTypedNode($optionName, $incoming);
             if ($schemaError !== null) {
                 $errors[] = $schemaError;
+                continue;
+            }
+
+            $nodeStrategy = self::resolveNodeStrategy($incoming);
+            if ($nodeStrategy === 'skip') {
+                continue;
+            }
+
+            if ($nodeStrategy === 'delete') {
+                delete_option($optionName);
+                $importedCount++;
                 continue;
             }
 
@@ -184,14 +231,25 @@ class ExportImport
             }
 
             // Backup existing value using a transient so it auto-expires
-            $existing = get_option($optionName, null);
+            $missingMarker = self::missingMarker();
+            $existing = get_option($optionName, $missingMarker);
+            $hasExisting = ($existing !== $missingMarker);
             if ($existing !== null && $existing !== []) {
                 $backupKey               = 'hf_backup_' . sanitize_key($optionName) . '_' . time();
                 set_transient($backupKey, $existing, HOUR_IN_SECONDS);
                 $backupKeys[$optionName] = $backupKey;
             }
 
-            $nextValue = self::buildNextOptionValue($existing, $incoming, $importMode);
+            if ($nodeStrategy === 'create' && $hasExisting) {
+                continue;
+            }
+
+            $effectiveMode = self::effectiveImportMode($importMode, $nodeStrategy);
+            if ($nodeStrategy === 'recreate' && $hasExisting) {
+                delete_option($optionName);
+            }
+
+            $nextValue = self::buildNextOptionValue($hasExisting ? $existing : null, $incoming, $effectiveMode);
 
             $updated = update_option($optionName, $nextValue);
             if ($updated || $existing === $nextValue) {
@@ -200,11 +258,17 @@ class ExportImport
         }
 
         if ($importedCount === 0 && empty($errors)) {
-            return ['success' => false, 'message' => 'No options were imported. The whitelist or prefix filter may have excluded all entries.'];
+            $result = ['success' => false, 'message' => 'No options were imported. The whitelist or prefix filter may have excluded all entries.'];
+            self::dispatchImportAfter($result, $decoded, $allowedOptionNames, $prefix, $options);
+
+            return $result;
         }
 
         if ($importedCount === 0) {
-            return ['success' => false, 'message' => implode(' ', $errors)];
+            $result = ['success' => false, 'message' => implode(' ', $errors)];
+            self::dispatchImportAfter($result, $decoded, $allowedOptionNames, $prefix, $options);
+
+            return $result;
         }
 
         $message = 'Options imported successfully.';
@@ -217,18 +281,37 @@ class ExportImport
             $result['backup_keys'] = $backupKeys;
         }
 
+        self::dispatchImportAfter($result, $decoded, $allowedOptionNames, $prefix, $options);
+
+        return $result;
+    }
+
+    /**
+     * Fires the import completion action for both success and failure outcomes.
+     *
+     * @param array<string, mixed> $result
+     * @param array<string, mixed> $decoded
+     * @param array<int, string> $allowedOptionNames
+     * @param string $prefix
+     * @param array<string, mixed> $options
+     */
+    private static function dispatchImportAfter(
+        array $result,
+        array $decoded,
+        array $allowedOptionNames,
+        string $prefix,
+        array $options
+    ): void {
         /**
          * Fires after HyperFields has finished importing options.
          *
          * @param array  $result             Import result.
          * @param array  $decoded            The full decoded JSON payload.
-         * @param array  $allowedOptionNames  Whitelist of option names allowed.
+         * @param array  $allowedOptionNames Whitelist of option names allowed.
          * @param string $prefix             Prefix filter applied.
          * @param array  $options            Import behavior options.
          */
         do_action('hyperfields/import/after', $result, $decoded, $allowedOptionNames, $prefix, $options);
-
-        return $result;
     }
 
     /**
@@ -339,6 +422,12 @@ class ExportImport
                 continue;
             }
 
+            $nodeStrategy = self::resolveNodeStrategy($incoming);
+            if ($nodeStrategy === 'skip') {
+                $skipped[] = "Skipped '{$optionName}': strategy=skip.";
+                continue;
+            }
+
             $incoming = $incoming['value'];
 
             if (!is_array($incoming) && !is_scalar($incoming) && $incoming !== null) {
@@ -363,12 +452,34 @@ class ExportImport
                 continue;
             }
 
-            $existing = get_option($optionName, null);
-            $nextValue = self::buildNextOptionValue($existing, $incoming, $importMode);
-            if ($existing !== $nextValue) {
+            $missingMarker = self::missingMarker();
+            $existing = get_option($optionName, $missingMarker);
+            $hasExisting = ($existing !== $missingMarker);
+
+            if ($nodeStrategy === 'delete') {
+                if ($hasExisting) {
+                    $changes[$optionName] = [
+                        'before' => $existing,
+                        'after' => null,
+                        'strategy' => 'delete',
+                    ];
+                }
+                continue;
+            }
+
+            if ($nodeStrategy === 'create' && $hasExisting) {
+                $skipped[] = "Skipped '{$optionName}': strategy=create and option already exists.";
+                continue;
+            }
+
+            $effectiveMode = self::effectiveImportMode($importMode, $nodeStrategy);
+            $nextValue = self::buildNextOptionValue($hasExisting ? $existing : null, $incoming, $effectiveMode);
+            $beforeValue = $hasExisting ? $existing : null;
+            if ($beforeValue !== $nextValue) {
                 $changes[$optionName] = [
-                    'before' => $existing,
+                    'before' => $beforeValue,
                     'after' => $nextValue,
+                    'strategy' => $nodeStrategy !== '' ? $nodeStrategy : $effectiveMode,
                 ];
             }
         }
@@ -381,6 +492,11 @@ class ExportImport
         ];
     }
 
+    /**
+     * ResolveImportMode.
+     *
+     * @return string
+     */
     private static function resolveImportMode(array $options): string
     {
         $mode = isset($options['mode']) ? sanitize_text_field((string) $options['mode']) : 'merge';
@@ -391,6 +507,11 @@ class ExportImport
         return $mode;
     }
 
+    /**
+     * BuildNextOptionValue.
+     *
+     * @return mixed
+     */
     private static function buildNextOptionValue(mixed $existing, mixed $incoming, string $importMode): mixed
     {
         if (!is_array($incoming)) {
@@ -473,5 +594,66 @@ class ExportImport
         }
 
         return SchemaValidator::validate($optionName, $node['value'], $schema);
+    }
+
+    /**
+     * Returns a per-option import strategy from a typed node.
+     *
+     * @param array<string, mixed> $node
+     * @return string
+     */
+    private static function resolveNodeStrategy(array $node): string
+    {
+        $strategy = isset($node[self::STRATEGY_KEY]) ? sanitize_key((string) $node[self::STRATEGY_KEY]) : '';
+        if (!in_array($strategy, self::SUPPORTED_NODE_STRATEGIES, true)) {
+            return '';
+        }
+
+        return $strategy;
+    }
+
+    /**
+     * Resolves effective import mode from default mode + node strategy.
+     *
+     * @return string
+     */
+    private static function effectiveImportMode(string $importMode, string $nodeStrategy): string
+    {
+        return match ($nodeStrategy) {
+            'replace', 'override', 'recreate' => 'replace',
+            'merge', 'migrate', 'create' => 'merge',
+            default => $importMode,
+        };
+    }
+
+    /**
+     * Returns a unique marker used to detect missing options from get_option.
+     *
+     * @return object
+     */
+    private static function missingMarker(): object
+    {
+        return (object) ['__hf_missing' => true];
+    }
+
+    /**
+     * Attaches an optional export strategy to an option typed node.
+     *
+     * @param array<string, mixed> $node
+     * @param string $optionName
+     * @param mixed $value
+     * @return array<string, mixed>
+     */
+    private static function attachExportStrategy(array $node, string $optionName, mixed $value): array
+    {
+        $strategy = apply_filters('hyperfields/export/node_strategy', 'replace', $optionName, $value);
+        $strategy = sanitize_key((string) $strategy);
+        if ($strategy === '' || !in_array($strategy, self::SUPPORTED_NODE_STRATEGIES, true)) {
+            return $node;
+        }
+
+        $node[self::STRATEGY_KEY] = $strategy;
+
+        return $node;
     }
 }

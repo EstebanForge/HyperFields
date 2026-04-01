@@ -206,6 +206,11 @@ class SchemaValidator
     //  String constraint validation
     // ──────────────────────────────────────────────────────────────────
 
+    /**
+     * ValidateStringConstraints.
+     *
+     * @return ?string
+     */
     private static function validateStringConstraints(string $fieldName, string $value, array $rule): ?string
     {
         // max length
@@ -259,6 +264,11 @@ class SchemaValidator
     //  Format validation
     // ──────────────────────────────────────────────────────────────────
 
+    /**
+     * ValidateFormat.
+     *
+     * @return ?string
+     */
     private static function validateFormat(string $fieldName, string $value, string $format): ?string
     {
         // Empty strings pass all format checks — emptiness is a separate concern

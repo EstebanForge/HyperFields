@@ -8,6 +8,11 @@ class TemplateLoader
     private static array $template_cache = [];
     private static array $rendered_field_types = [];
 
+    /**
+     * Init.
+     *
+     * @return void
+     */
     public static function init(): void
     {
         self::$template_dir = __DIR__ . '/templates/';
@@ -18,6 +23,11 @@ class TemplateLoader
         add_action('wp_print_footer_scripts', [__CLASS__, 'enqueueLateAssets']);
     }
 
+    /**
+     * RenderField.
+     *
+     * @return void
+     */
     public static function renderField(array $field_data, mixed $value = null): void
     {
         $type = $field_data['type'] ?? 'text';
@@ -56,6 +66,11 @@ class TemplateLoader
         }
     }
 
+    /**
+     * GetTemplateFile.
+     *
+     * @return ?string
+     */
     private static function getTemplateFile(string $type): ?string
     {
         // Check cache first
@@ -94,6 +109,11 @@ class TemplateLoader
         return null;
     }
 
+    /**
+     * RenderFallback.
+     *
+     * @return void
+     */
     private static function renderFallback(array $field_data): void
     {
         $type = $field_data['type'] ?? 'text';
@@ -128,6 +148,11 @@ class TemplateLoader
 <?php
     }
 
+    /**
+     * EnqueueAssets.
+     *
+     * @return void
+     */
     public static function enqueueAssets(): void
     {
         $plugin_url = defined('HYPERPRESS_PLUGIN_URL') ? HYPERPRESS_PLUGIN_URL : (defined('HYPERFIELDS_PLUGIN_URL') ? HYPERFIELDS_PLUGIN_URL : '');
@@ -196,6 +221,11 @@ class TemplateLoader
         ]);
     }
 
+    /**
+     * EnqueueLateAssets.
+     *
+     * @return void
+     */
     public static function enqueueLateAssets(): void
     {
         // Enqueue heavy/type-specific assets after fields have rendered (works for admin and frontend)
@@ -212,6 +242,11 @@ class TemplateLoader
         }
     }
 
+    /**
+     * GetSupportedFieldTypes.
+     *
+     * @return array
+     */
     public static function getSupportedFieldTypes(): array
     {
         $types = [

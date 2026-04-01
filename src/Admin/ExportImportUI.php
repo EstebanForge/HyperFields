@@ -126,6 +126,12 @@ class ExportImportUI
         );
     }
 
+    /**
+     * Render the UI using a page configuration object.
+     *
+     * @param ExportImportPageConfig $config Prepared page configuration.
+     * @return string HTML for the page.
+     */
     public static function renderConfigured(ExportImportPageConfig $config): string
     {
         return self::render(
@@ -216,6 +222,10 @@ class ExportImportUI
         ?callable $importer = null,
         ?string $exportFormExtras = null,
     ): string {
+        if (TransferLogsUI::isEnabled() && TransferLogsUI::isLogsViewRequest()) {
+            return TransferLogsUI::renderPage();
+        }
+
         if (empty($allowedImportOptions)) {
             $allowedImportOptions = array_keys($options);
         }
@@ -274,6 +284,7 @@ class ExportImportUI
         // ---------- Handle: Confirm import ----------
         $importMessage = '';
         $importSuccess = false;
+        $importResult  = [];
         if (
             isset($_POST['hf_confirm_submit'])
             && isset($_POST['hf_confirm_nonce'])
@@ -289,11 +300,16 @@ class ExportImportUI
                 $result = $importer !== null
                     ? call_user_func($importer, $storedJson, $allowedImportOptions, $prefix)
                     : ExportImport::importOptions($storedJson, $allowedImportOptions, $prefix);
+                $importResult = is_array($result) ? $result : [];
                 $importSuccess = (bool) ($result['success'] ?? false);
                 $importMessage = (string) ($result['message'] ?? '');
                 delete_transient($transientKey);
             } else {
                 $importMessage = __('Import session expired or is invalid. Please upload the file again.', 'hyperfields');
+                $importResult = [
+                    'success' => false,
+                    'message' => $importMessage,
+                ];
             }
         }
 
@@ -312,6 +328,7 @@ class ExportImportUI
             incomingData:        $incomingData,
             importMessage:       $importMessage,
             importSuccess:       $importSuccess,
+            importResult:        $importResult,
             exportFormExtras:    $exportFormExtras,
         );
 
@@ -609,9 +626,11 @@ CSS);
         array $incomingData,
         string $importMessage,
         bool $importSuccess,
+        array $importResult,
         ?string $exportFormExtras = null,
     ): void {
         $hasDiff = $previewTransientKey !== '' && !empty($incomingData);
+        $strategySummary = $hasDiff ? self::buildStrategySummary($incomingData) : [];
         $cancelUrl  = admin_url('admin.php?page=' . esc_attr(sanitize_text_field(wp_unslash($_GET['page'] ?? ''))));
         $groupLabels = [];
         foreach ($options as $optKey => $_optLabel) {
@@ -626,9 +645,48 @@ CSS);
             <p><?php echo esc_html($description); ?></p>
 
             <?php if ($importMessage): ?>
-                <div class="notice notice-<?php echo $importSuccess ? 'success' : 'error'; ?> is-dismissible">
-                    <p><?php echo esc_html($importMessage); ?></p>
+                <?php
+                $noticeType = apply_filters(
+                    'hyperfields/import/ui_notice_type',
+                    $importSuccess ? 'success' : 'error',
+                    $importResult,
+                    $importSuccess
+                );
+                $noticeType = in_array($noticeType, ['success', 'error', 'warning', 'info'], true) ? $noticeType : 'error';
+
+                $noticeMessage = apply_filters(
+                    'hyperfields/import/ui_notice_message',
+                    $importMessage,
+                    $importResult,
+                    $importSuccess
+                );
+                $noticeMessage = is_string($noticeMessage) ? $noticeMessage : $importMessage;
+
+                $noticeExtraHtml = apply_filters(
+                    'hyperfields/import/ui_notice_extra_html',
+                    '',
+                    $importResult,
+                    $importSuccess
+                );
+                $noticeExtraHtml = is_string($noticeExtraHtml) ? $noticeExtraHtml : '';
+                ?>
+                <div class="notice notice-<?php echo esc_attr($noticeType); ?> is-dismissible">
+                    <p><?php echo esc_html($noticeMessage); ?></p>
+                    <?php if ($noticeExtraHtml !== ''): ?>
+                        <?php echo wp_kses_post($noticeExtraHtml); ?>
+                    <?php endif; ?>
                 </div>
+                <?php
+                /**
+                 * Fires after the default import UI notice is rendered.
+                 *
+                 * Use this to output additional status details in the import screen.
+                 *
+                 * @param array $importResult Import result payload from the importer.
+                 * @param bool  $importSuccess Convenience success flag.
+                 */
+                do_action('hyperfields/import/ui_notice_after', $importResult, $importSuccess);
+                ?>
             <?php endif; ?>
 
             <?php if (!$hasDiff): ?>
@@ -859,6 +917,21 @@ CSS);
             <p><?php esc_html_e('Review the changes below. Keys highlighted in green will be added or updated; keys in red will be removed.', 'hyperfields'); ?></p>
             <p><em><?php esc_html_e('Current settings are shown on the left; new values to be imported are on the right.', 'hyperfields'); ?></em></p>
 
+            <?php if (!empty($strategySummary)): ?>
+                <div style="margin:12px 0 14px;padding:12px;border:1px solid #ccd0d4;border-radius:6px;background:#fff;">
+                    <p style="margin:0 0 8px 0;"><strong><?php esc_html_e('Strategy Summary', 'hyperfields'); ?></strong></p>
+                    <ul style="margin:0 0 0 16px;list-style:disc;">
+                        <?php foreach ($strategySummary as $item): ?>
+                            <li>
+                                <code><?php echo esc_html((string) $item['strategy']); ?></code>
+                                <?php echo esc_html(sprintf(__(' × %d', 'hyperfields'), (int) $item['count'])); ?>
+                                <span class="description"> — <?php echo esc_html((string) $item['effect']); ?></span>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+            <?php endif; ?>
+
             <div id="hf-diff-container" style="overflow:auto;max-height:70vh;border:1px solid #1f2937;border-radius:8px;position:relative;">
                 <p style="padding:16px;"><?php esc_html_e('Loading diff…', 'hyperfields'); ?></p>
             </div>
@@ -961,7 +1034,86 @@ CSS);
 
             <?php endif; ?>
 
+            <?php if (TransferLogsUI::isEnabled()): ?>
+                <p style="text-align:right;margin-top:12px;">
+                    <a href="<?php echo esc_url(TransferLogsUI::logsUrl()); ?>">
+                        <?php esc_html_e('View transfer logs', 'hyperfields'); ?>
+                    </a>
+                </p>
+            <?php endif; ?>
+
         </div><!-- /.wrap -->
         <?php
+    }
+
+    /**
+     * Builds strategy summary rows from incoming payload nodes.
+     *
+     * @param array<string, mixed> $incomingData
+     * @return array<int, array{strategy: string, count: int, effect: string}>
+     */
+    private static function buildStrategySummary(array $incomingData): array
+    {
+        $counts = [];
+        self::collectStrategyCounts($incomingData, $counts);
+        if (empty($counts)) {
+            return [];
+        }
+
+        ksort($counts);
+        $summary = [];
+        foreach ($counts as $strategy => $count) {
+            $summary[] = [
+                'strategy' => $strategy,
+                'count' => $count,
+                'effect' => self::strategyEffect($strategy),
+            ];
+        }
+
+        return $summary;
+    }
+
+    /**
+     * Recursively counts `__strategy` entries in a payload tree.
+     *
+     * @param mixed $value
+     * @param array<string, int> $counts
+     * @return void
+     */
+    private static function collectStrategyCounts(mixed $value, array &$counts): void
+    {
+        if (!is_array($value)) {
+            return;
+        }
+
+        if (isset($value['__strategy']) && is_string($value['__strategy'])) {
+            $strategy = sanitize_key($value['__strategy']);
+            if ($strategy !== '') {
+                $counts[$strategy] = ($counts[$strategy] ?? 0) + 1;
+            }
+        }
+
+        foreach ($value as $item) {
+            self::collectStrategyCounts($item, $counts);
+        }
+    }
+
+    /**
+     * Returns a short description of what each strategy does.
+     *
+     * @param string $strategy
+     * @return string
+     */
+    private static function strategyEffect(string $strategy): string
+    {
+        return match ($strategy) {
+            'merge', 'migrate' => __('merge into existing destination values', 'hyperfields'),
+            'replace', 'override' => __('replace destination values', 'hyperfields'),
+            'create', 'new' => __('create only when destination value is missing', 'hyperfields'),
+            'delete' => __('delete destination value/record', 'hyperfields'),
+            'recreate' => __('delete then create destination value/record', 'hyperfields'),
+            'skip' => __('skip this node during import', 'hyperfields'),
+            default => __('custom strategy behavior', 'hyperfields'),
+        };
     }
 }
