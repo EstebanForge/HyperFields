@@ -261,7 +261,7 @@ class FieldTest extends \PHPUnit\Framework\TestCase
         // Override apply_filters for this specific call
         Functions\when('apply_filters')
             ->alias(function($tag, $value, ...$args) {
-                if ($tag === 'hyperpress/fields/sanitize_custom') {
+                if ($tag === 'hyperfields/sanitize_custom') {
                     return 'filtered';
                 }
                 return $value; // Fallback to 2nd arg behavior
@@ -363,7 +363,7 @@ class FieldTest extends \PHPUnit\Framework\TestCase
         // Custom rule
         $field->setValidation(['custom' => 'param']);
         Functions\expect('apply_filters')
-            ->with('hyperpress/fields/validation_custom', true, 'val', 'param', $field)
+            ->with('hyperfields/validation_custom', true, 'val', 'param', $field)
             ->andReturn(true);
         $this->assertTrue($field->validateValue('val'));
     }

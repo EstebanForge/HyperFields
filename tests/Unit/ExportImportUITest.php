@@ -195,7 +195,10 @@ class ExportImportUITest extends \PHPUnit\Framework\TestCase
             'prefix'      => '',
             'exported_at' => '2024-01-01 00:00:00',
             'site_url'    => 'https://example.com',
-            'options'     => ['my_option' => ['key' => 'val']],
+            'options'     => ['my_option' => [
+                'value' => ['key' => 'val'],
+                '_schema' => ['type' => 'array'],
+            ]],
         ]);
 
         Functions\when('get_transient')->justReturn($exportedJson);
