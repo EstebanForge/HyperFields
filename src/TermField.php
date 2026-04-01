@@ -29,7 +29,7 @@ class TermField extends Field
     {
         $key = $this->meta_key_prefix . $this->getName();
 
-        return apply_filters('hyperpress/fields/term_field_meta_key', $key, $this->getName(), $this->term_id);
+        return apply_filters('hyperfields/term_field_meta_key', $key, $this->getName(), $this->term_id);
     }
 
     public function getValue(): mixed

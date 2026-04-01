@@ -44,7 +44,7 @@ class TemplateLoader
         }
 
         // Allow template override via filter
-        $template_file = apply_filters('hyperpress/fields/template', $template_file, $type, $field_data);
+        $template_file = apply_filters('hyperfields/template', $template_file, $type, $field_data);
 
         if (file_exists($template_file)) {
 
@@ -72,7 +72,7 @@ class TemplateLoader
         }
 
         // Check for type-specific templates in theme
-        $theme_template = get_template_directory() . '/hyperpress/fields/field-' . $type . '.php';
+        $theme_template = get_template_directory() . '/hyperfields/fields/field-' . $type . '.php';
         if (file_exists($theme_template)) {
             self::$template_cache[$type] = $theme_template;
 
@@ -81,7 +81,7 @@ class TemplateLoader
 
         // Check child theme
         if (is_child_theme()) {
-            $child_template = get_stylesheet_directory() . '/hyperpress/fields/field-' . $type . '.php';
+            $child_template = get_stylesheet_directory() . '/hyperfields/fields/field-' . $type . '.php';
             if (file_exists($child_template)) {
                 self::$template_cache[$type] = $child_template;
 
@@ -246,6 +246,6 @@ class TemplateLoader
             'custom',
         ];
 
-        return apply_filters('hyperpress/fields/supported_field_types', $types);
+        return apply_filters('hyperfields/supported_field_types', $types);
     }
 }
