@@ -29,6 +29,7 @@ class ExportImportUITest extends \PHPUnit\Framework\TestCase
         Functions\when('wp_unslash')->returnArg();
         Functions\when('esc_url')->returnArg();
         Functions\when('admin_url')->returnArg();
+        Functions\when('add_query_arg')->justReturn('https://example.com/wp-admin/admin.php?page=hf-page&hf_view=transfer_logs');
         Functions\when('wp_enqueue_style')->justReturn(null);
         Functions\when('wp_enqueue_script')->justReturn(null);
         Functions\when('wp_json_encode')->alias(function ($data, $flags = 0) {

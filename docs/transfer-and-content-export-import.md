@@ -25,6 +25,7 @@ Every exported option is wrapped in a **typed-node envelope** — a JSON object 
   "options": {
     "my_plugin_color": {
       "value": "#7f54b3",
+      "__strategy": "replace",
       "_schema": {
         "type": "string",
         "format": "hex_color"
@@ -48,6 +49,24 @@ Every exported option is wrapped in a **typed-node envelope** — a JSON object 
 ```
 
 On import, HyperFields **rejects** any option node that is missing the typed-node envelope (`value` + `_schema`). The value is validated against all `_schema` rules before being written to the database.
+
+### Node strategies (`__strategy`)
+
+HyperFields supports an optional `__strategy` key per option node.  
+Default strategy is **`replace`**.
+
+Supported values:
+- `merge`, `migrate`: import using merge semantics.
+- `replace`, `override`: import using replace semantics.
+- `create`: only create when option does not already exist.
+- `skip`: ignore this node.
+- `delete`: delete destination option.
+- `recreate`: delete then create from incoming value.
+
+If no strategy is provided, import mode falls back to the global import `mode` option.
+
+In the HyperFields admin Import Preview screen, a **Strategy Summary** panel
+shows the detected `__strategy` values and counts before confirmation.
 
 ### Exporting with schema rules
 
@@ -132,7 +151,7 @@ Diff applies the same typed-node validation as import. Invalid nodes appear in `
 
 - Prefix filters apply to array keys only. Scalar option values are skipped when a non-empty prefix is provided.
 - Backups use transient keys (`backup_keys`) with 1-hour expiry. Restore via `ExportImport::restoreBackup($key, $optionName)`.
-- The `hyperfields/import/after` action fires after import completes, passing `($result, $decoded, $allowedOptionNames, $prefix, $options)`.
+- The `hyperfields/export/after` and `hyperfields/import/after` actions fire after export/import completes.
 
 ---
 
@@ -429,7 +448,115 @@ $preview = ContentExportImport::diffPosts($json, [
 
 Import matching rules:
 - Canonical identity = `post_type + slug`.
-- Existing records are resolved by `get_page_by_path($slug, OBJECT, $post_type)`.
+- If incoming `id` is present, HyperFields first checks destination post by ID
+  and only treats it as the same record when both `post_type` and `slug` also match.
+- Otherwise (or when ID check fails), existing records are resolved by
+  `get_page_by_path($slug, OBJECT, $post_type)`.
+
+Custom rule hooks:
+- `hyperfields/content_import/resolve_existing_post` lets you override how an existing destination post is resolved.
+- `hyperfields/content_import/row_decision` lets you decide per row whether to `create`, `merge`, `delete`, `recreate`, or `skip` (with optional `target_id`).
+
+### Content row strategies (`__strategy`)
+
+Each exported content row includes `__strategy` with default value **`replace`**.
+You can edit this in JSON before import.
+
+Supported values:
+- `merge`, `migrate`, `override`, `replace`: merge into existing if found, otherwise create.
+- `create`, `new`: force create.
+- `delete`: delete matched destination row.
+- `recreate`: delete matched destination row (if present) then create new row.
+- `skip`: do nothing for this row.
+
+### Override import behavior (examples)
+
+#### Example A: Force specific rows to recreate instead of merge
+
+```php
+add_filter(
+    'hyperfields/content_import/row_decision',
+    static function (array $decision, array $row, string $postType, string $slug, array $options): array {
+        // If a row has recreate=true in payload meta, force recreate.
+        if (!empty($row['meta']['recreate'][0])) {
+            return [
+                'action' => 'recreate',
+                'reason' => 'forced_recreate',
+            ];
+        }
+
+        return $decision;
+    },
+    10,
+    5
+);
+```
+
+#### Example B: Resolve existing record by a custom meta key first
+
+```php
+add_filter(
+    'hyperfields/content_import/resolve_existing_post',
+    static function ($resolved, array $row, string $postType, string $slug) {
+        $externalId = isset($row['meta']['external_id'][0]) ? (string) $row['meta']['external_id'][0] : '';
+        if ($externalId === '') {
+            return $resolved;
+        }
+
+        $query = new WP_Query([
+            'post_type' => $postType,
+            'post_status' => 'any',
+            'posts_per_page' => 1,
+            'meta_key' => 'external_id',
+            'meta_value' => $externalId,
+            'fields' => 'ids',
+            'no_found_rows' => true,
+        ]);
+
+        if (!empty($query->posts)) {
+            return (int) $query->posts[0];
+        }
+
+        return $resolved;
+    },
+    10,
+    4
+);
+```
+
+#### Example C: Enforce module-level import policies
+
+```php
+use HyperFields\Transfer\Manager;
+
+// Skip selected modules in production.
+add_filter(
+    'hyperfields/transfer_manager/import/module_decision',
+    static function (array $decision, string $moduleKey, $payload, array $context, array $bundle): array {
+        if (wp_get_environment_type() === 'production' && in_array($moduleKey, ['emails', 'content'], true)) {
+            return [
+                'action' => 'skip',
+                'reason' => 'blocked_in_production',
+            ];
+        }
+
+        return $decision;
+    },
+    10,
+    5
+);
+
+// Inject per-module flags consumed by your importer callback.
+add_filter(
+    'hyperfields/transfer_manager/import/module_context',
+    static function (array $context, string $moduleKey, $payload, array $bundle): array {
+        $context['strict_mode'] = ($moduleKey === 'content');
+        return $context;
+    },
+    10,
+    4
+);
+```
 
 ---
 
@@ -473,6 +600,18 @@ $bundle = $manager->export();          // or export(['options'])
 $diff   = $manager->diff($bundle);
 $apply  = $manager->import($bundle);
 ```
+
+### Module strategies (`__strategy`)
+
+Module payloads may include `__strategy`.  
+Default module strategy in runtime context is **`replace`**.
+
+Current built-in behavior:
+- `skip` => module is skipped automatically.
+- Any other value => module importer runs normally, and strategy is exposed to the importer via module context (`$context['strategy']`).
+
+This allows module authors to implement project-specific logic for values such as
+`merge`, `recreate`, `delete`, `override`, or `migrate`.
 
 Default bundle shape:
 
@@ -572,13 +711,66 @@ Resulting bundle shape:
 
 | Hook | Type | Fired by | Parameters |
 |---|---|---|---|
+| `hyperfields/export/after` | Action | `ExportImport::exportOptions()` | `$result, $payload, $optionNames, $prefix, $schemaMap` |
+| `hyperfields/export/node_strategy` | Filter | `ExportImport::exportOptions()` | `$strategy, $optionName, $value` |
 | `hyperfields/import/after` | Action | `ExportImport::importOptions()` | `$result, $decoded, $allowedOptionNames, $prefix, $options` |
+| `hyperfields/content_export/after` | Action | `ContentExportImport::exportPosts()` | `$result, $payload, $postTypes, $options` |
+| `hyperfields/content_export/row_strategy` | Filter | `ContentExportImport::normalizeExportPost()` | `$strategy, $post` |
+| `hyperfields/content_import/resolve_existing_post` | Filter | `ContentExportImport::resolveExistingPost()` | `$resolved, $row, $postType, $slug` |
+| `hyperfields/content_import/row_decision` | Filter | `ContentExportImport::importPosts()` | `$decision, $row, $postType, $slug, $options` |
+| `hyperfields/content_import/after` | Action | `ContentExportImport::importPosts()` | `$result, $decoded, $options` |
+| `hyperfields/transfer_manager/export/after` | Action | `Transfer\Manager::export()` | `$result, $selectedModuleKeys, $context` |
+| `hyperfields/transfer_manager/import/module_payload` | Filter | `Transfer\Manager::import()` | `$payload, $moduleKey, $context, $bundle` |
+| `hyperfields/transfer_manager/import/module_decision` | Filter | `Transfer\Manager::import()` | `$decision, $moduleKey, $payload, $context, $bundle` |
+| `hyperfields/transfer_manager/import/module_context` | Filter | `Transfer\Manager::import()` | `$context, $moduleKey, $payload, $bundle` |
+| `hyperfields/transfer_manager/import/after` | Action | `Transfer\Manager::import()` | `$result, $attemptedModuleKeys, $context` |
+| `hyperfields/import/ui_notice_type` | Filter | `Admin\ExportImportUI` | `$noticeType, $importResult, $importSuccess` |
+| `hyperfields/import/ui_notice_message` | Filter | `Admin\ExportImportUI` | `$message, $importResult, $importSuccess` |
+| `hyperfields/import/ui_notice_extra_html` | Filter | `Admin\ExportImportUI` | `$html, $importResult, $importSuccess` |
+| `hyperfields/import/ui_notice_after` | Action | `Admin\ExportImportUI` | `$importResult, $importSuccess` |
+| `hyperfields/transfer_logs/ui_enabled` | Filter | `Admin\TransferLogsUI` | `$enabled` (default `true`) |
+| `hyperfields/transfer_logs/retention_days` | Filter | `Transfer\AuditLogStorage` | `$days` (default `180`) |
+| `hyperfields/transfer_logs/prune_interval_seconds` | Filter | `Transfer\AuditLogStorage` | `$seconds` (default `86400`) |
 | `hyperfields/validation/format` | Filter | `SchemaValidator` | `$error, $fieldName, $value, $format` — return string to reject, null to accept |
 | `hyperfields/export/filename_prefix` | Filter | `ExportImportUI` | `$prefix` — customise the download filename |
 
 ---
 
-## 8) Extension Guidance
+## 8) Transfer Audit Logging
+
+HyperFields now includes built-in transfer audit logging for options, content, and transfer-manager operations.
+
+Storage behavior:
+- Logs are written to a dedicated table: `{wp_prefix}hyperfields_transfer_logs`.
+- Schema setup is lazy and idempotent. Migration is only attempted when the logger is first used.
+- Runtime guardrails:
+  - request-local migration guard (runs once per request),
+  - schema-version option guard,
+  - transient lock to avoid repeated concurrent migration work.
+- If DB logging is unavailable, HyperFields falls back to file logging via `HyperFields\Log`.
+
+Retention behavior:
+- Default retention: **180 days**.
+- Expired rows are pruned lazily via `AuditLogStorage::maybePruneExpired()`.
+- Pruning does not run on every request; it is interval-gated (default once per 24h).
+
+Retention customization:
+
+```php
+// Keep transfer logs for 90 days instead of 180.
+add_filter('hyperfields/transfer_logs/retention_days', static fn (int $days): int => 90);
+
+// Run lazy prune checks at most once per hour.
+add_filter('hyperfields/transfer_logs/prune_interval_seconds', static fn (int $seconds): int => HOUR_IN_SECONDS);
+```
+
+Notes:
+- Audit rows are metadata-only (operation, status, source, counts, hash, summary). Raw import/export payloads are not stored.
+- Transfer-manager runs are de-duplicated so nested option/content events do not generate duplicate rows for the same operation.
+
+---
+
+## 9) Extension Guidance
 
 Recommended pattern for downstream integrations:
 

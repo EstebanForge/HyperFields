@@ -10,6 +10,7 @@ It provides:
 - JSON export/import for options with typed-node schema validation
 - JSON export/import for pages/CPT content
 - pluggable transfer-module orchestration
+- transfer audit logging with a built-in admin logs screen
 
 ## Installation
 
@@ -56,6 +57,7 @@ See [`docs/transfer-and-content-export-import.md`](docs/transfer-and-content-exp
 - Building schema maps for exports
 - Import validation flow
 - Extending with custom format validators
+- Transfer audit logging, retention controls, and logs UI hooks
 
 ## Requirements
 
