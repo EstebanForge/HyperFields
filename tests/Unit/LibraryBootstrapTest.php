@@ -84,8 +84,9 @@ class LibraryBootstrapTest extends TestCase
             'http://example.com/wp-content/plugins/host-plugin/vendor/estebanforge/hyperfields/',
             HYPERFIELDS_PLUGIN_URL
         );
-        $this->assertSame(HYPERFIELDS_PLUGIN_URL, HYPERPRESS_PLUGIN_URL);
         $this->assertSame($version, HYPERFIELDS_VERSION);
-        $this->assertSame($version, HYPERPRESS_VERSION);
+        // HYPERPRESS_VERSION and HYPERPRESS_PLUGIN_URL are owned by HyperPress-Core, not HyperFields.
+        $this->assertFalse(defined('HYPERPRESS_VERSION'));
+        $this->assertFalse(defined('HYPERPRESS_PLUGIN_URL'));
     }
 }
