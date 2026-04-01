@@ -457,12 +457,35 @@ textarea.hf-json-codeblock:focus {
     cursor: pointer;
 }
 /* Import diff — diff2html overrides */
+#hf-diff-container {
+    overflow: auto !important;
+    max-height: 70vh !important;
+    display: block !important;
+}
+#hf-diff-container .d2h-wrapper,
+#hf-diff-container .d2h-file-wrapper {
+    overflow: visible !important;
+    max-height: none !important;
+    height: auto !important;
+    margin-bottom: 0 !important;
+}
 #hf-diff-container .d2h-file-collapse,
 #hf-diff-container .d2h-moved-tag {
     display: none !important;
 }
-#hf-diff-container .d2h-file-wrapper {
-    margin: 0 !important;
+/* Horizontal scroll for long lines */
+#hf-diff-container .d2h-code-side {
+    overflow-x: auto;
+    overflow-y: visible;
+}
+#hf-diff-container .d2h-file-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+#hf-diff-container .d2h-code-line-ctn {
+    word-break: break-word;
+    white-space: pre-wrap;
 }
 body .hyperpress-options-wrap.hf-diff-view {
     max-width: none;
@@ -634,7 +657,7 @@ CSS);
 
             <p style="margin-top:12px;">
                 <a href="data:application/json;charset=utf-8,<?php echo rawurlencode($exportJson); ?>"
-                   download="hyperfields-export-<?php echo esc_attr(gmdate('Y-m-d')); ?>.json"
+                   download="<?php echo esc_attr(apply_filters('hyperfields/export/filename_prefix', 'hyperfields-export')); ?>-<?php echo esc_attr(gmdate('Y-m-d')); ?>.json"
                    class="button button-primary">
                     <?php esc_html_e('Download JSON', 'hyperfields'); ?>
                 </a>
@@ -834,9 +857,9 @@ CSS);
             <!-- ====== DIFF PREVIEW SECTION ====== -->
             <h2><?php esc_html_e('Import Preview', 'hyperfields'); ?></h2>
             <p><?php esc_html_e('Review the changes below. Keys highlighted in green will be added or updated; keys in red will be removed.', 'hyperfields'); ?></p>
-            <p><em><?php esc_html_e('Current settings are shown on the left; imported values are on the right.', 'hyperfields'); ?></em></p>
+            <p><em><?php esc_html_e('Current settings are shown on the left; new values to be imported are on the right.', 'hyperfields'); ?></em></p>
 
-            <div id="hf-diff-container" style="overflow:auto;max-height:900px;border:1px solid #1f2937;border-radius:8px;">
+            <div id="hf-diff-container" style="overflow:auto;max-height:70vh;border:1px solid #1f2937;border-radius:8px;position:relative;">
                 <p style="padding:16px;"><?php esc_html_e('Loading diff…', 'hyperfields'); ?></p>
             </div>
 

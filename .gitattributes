@@ -8,6 +8,10 @@
 /CLAUDE.md export-ignore
 /phpunit.xml export-ignore
 
+# Exclude dev files
+/context7.json export-ignore
+/patchwork.json export-ignore
+
 # Exclude dev directories
 /.githooks/ export-ignore
 /tests/ export-ignore

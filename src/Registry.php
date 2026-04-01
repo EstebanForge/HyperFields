@@ -179,7 +179,7 @@ class Registry
 
     public function registerAll(): void
     {
-        do_action('hyperpress/fields/register');
+        do_action('hyperfields/register');
         $this->registerAdminHooks();
     }
 
