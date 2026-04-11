@@ -21,24 +21,25 @@ class FieldTest extends \PHPUnit\Framework\TestCase
         // Stub WordPress functions that might be needed
         Functions\stubTranslationFunctions();
         Functions\stubEscapeFunctions();
-        Functions\when('sanitize_text_field')->alias(function($value) {
+        Functions\when('sanitize_text_field')->alias(function ($value) {
             // Mimic WordPress sanitize_text_field behavior
             $value = preg_replace('/<script\b[^>]*>(.*?)<\/script>/is', '', $value);
             $value = strip_tags($value);
             $value = trim($value);
+
             return $value;
         });
-        Functions\when('sanitize_email')->alias(function($value) {
+        Functions\when('sanitize_email')->alias(function ($value) {
             return filter_var($value, FILTER_SANITIZE_EMAIL);
         });
-        Functions\when('sanitize_url')->alias(function($value) {
+        Functions\when('sanitize_url')->alias(function ($value) {
             return filter_var($value, FILTER_SANITIZE_URL);
         });
-        Functions\when('is_email')->alias(function($value) {
+        Functions\when('is_email')->alias(function ($value) {
             return filter_var($value, FILTER_VALIDATE_EMAIL) !== false ? $value : false;
         });
         Functions\when('wp_kses_post')->returnArg();
-        Functions\when('absint')->alias(function($value) { return abs((int) $value); });
+        Functions\when('absint')->alias(function ($value) { return abs((int) $value); });
         Functions\when('apply_filters')->returnArg(2);
         Functions\when('sanitize_hex_color')->returnArg();
     }
@@ -124,7 +125,7 @@ class FieldTest extends \PHPUnit\Framework\TestCase
         $options = [
             'option1' => 'Option 1',
             'option2' => 'Option 2',
-            'option3' => 'Option 3'
+            'option3' => 'Option 3',
         ];
 
         $field->setOptions($options);
@@ -174,13 +175,13 @@ class FieldTest extends \PHPUnit\Framework\TestCase
         $field->setValidation([
             'min' => 1,
             'max' => 100,
-            'required' => true
+            'required' => true,
         ]);
 
         $this->assertEquals([
             'min' => 1,
             'max' => 100,
-            'required' => true
+            'required' => true,
         ], $field->getValidation());
     }
 
@@ -192,25 +193,25 @@ class FieldTest extends \PHPUnit\Framework\TestCase
             'show_when' => [
                 'field' => 'parent_field',
                 'operator' => 'equals',
-                'value' => 'show'
-            ]
+                'value' => 'show',
+            ],
         ]);
 
         $this->assertEquals([
             'show_when' => [
                 'field' => 'parent_field',
                 'operator' => 'equals',
-                'value' => 'show'
-            ]
+                'value' => 'show',
+            ],
         ], $field->getConditionalLogic());
     }
 
     public function testMultipleValues()
     {
         $field = Field::make('select', 'test_select', 'Test Select');
-        
+
         $this->assertFalse($field->isMultiple());
-        
+
         $field->setMultiple(true);
         $this->assertTrue($field->isMultiple());
     }
@@ -220,11 +221,11 @@ class FieldTest extends \PHPUnit\Framework\TestCase
         // Text/Hidden
         $field = Field::make('text', 'f', 'F');
         $this->assertEquals('clean', $field->sanitizeValue('clean'));
-        
+
         // Textarea/RichText/Wysiwyg
         $field = Field::make('textarea', 'f', 'F');
         $this->assertEquals('<b>safe</b>', $field->sanitizeValue('<b>safe</b>'));
-        
+
         // Number
         $field = Field::make('number', 'f', 'F');
         $this->assertEquals(123.45, $field->sanitizeValue('123.45'));
@@ -233,23 +234,23 @@ class FieldTest extends \PHPUnit\Framework\TestCase
         // URL
         $field = Field::make('url', 'f', 'F');
         $this->assertEquals('http://example.com', $field->sanitizeValue('http://example.com'));
-        
+
         // Color
         $field = Field::make('color', 'f', 'F');
         $this->assertEquals('#ffffff', $field->sanitizeValue('#ffffff'));
-        
+
         // Date/Time
         $field = Field::make('date', 'f', 'F');
         $this->assertEquals('2023-01-01', $field->sanitizeValue('2023-01-01'));
-        
+
         // Image (absint)
         $field = Field::make('image', 'f', 'F');
         $this->assertEquals(123, $field->sanitizeValue('123'));
-        
+
         // File (url)
         $field = Field::make('file', 'f', 'F');
         $this->assertEquals('http://example.com/file.pdf', $field->sanitizeValue('http://example.com/file.pdf'));
-        
+
         // Checkbox
         $field = Field::make('checkbox', 'f', 'F');
         $this->assertTrue($field->sanitizeValue('1'));
@@ -257,27 +258,28 @@ class FieldTest extends \PHPUnit\Framework\TestCase
 
         // Default custom filter
         $field = Field::make('custom', 'f', 'F');
-        
+
         // Override apply_filters for this specific call
         Functions\when('apply_filters')
-            ->alias(function($tag, $value, ...$args) {
+            ->alias(function ($tag, $value, ...$args) {
                 if ($tag === 'hyperfields/sanitize_custom') {
                     return 'filtered';
                 }
+
                 return $value; // Fallback to 2nd arg behavior
             });
-            
+
         $this->assertEquals('filtered', $field->sanitizeValue('val'));
     }
 
     public function testArgsAndOptionValue()
     {
         $field = Field::make('text', 'f', 'F')->setDefault('def');
-        
+
         // Args
         $field->addArg('key', 'val');
         $this->assertEquals(['key' => 'val'], $field->getArgs());
-        
+
         // Option Value direct retrieval
         Functions\expect('get_option')->with('f', 'def')->andReturn('opt_val');
         $this->assertEquals('opt_val', $field->getOptionValue());
@@ -359,7 +361,7 @@ class FieldTest extends \PHPUnit\Framework\TestCase
         $field->setValidation(['float' => true]);
         $this->assertTrue($field->validateValue('12.3'));
         $this->assertFalse($field->validateValue('abc'));
-        
+
         // Custom rule
         $field->setValidation(['custom' => 'param']);
         Functions\expect('apply_filters')
@@ -375,7 +377,7 @@ class FieldTest extends \PHPUnit\Framework\TestCase
         // 1. Pre-loaded options (via setOptionValues)
         $field->setOptionValues(['f' => 'preloaded']);
         $this->assertEquals('preloaded', $field->getValue());
-        
+
         // --- Test calls to get_option for different scenarios ---
 
         // Scenario: option_name is string ('my_option') and returns array value
@@ -387,7 +389,7 @@ class FieldTest extends \PHPUnit\Framework\TestCase
             ->with('my_option')
             ->andReturn(['f' => 'opt_val']);
         $this->assertEquals('opt_val', $field->getValue());
-        
+
         // Scenario: Default value (option_name is null)
         $prop->setValue($field, null); // Reset $field->option_name to null
         $this->assertEquals('def', $field->getValue());
@@ -418,19 +420,19 @@ class FieldTest extends \PHPUnit\Framework\TestCase
     public function testGetNameAttr()
     {
         $field = Field::make('text', 'f', 'F');
-        
+
         // Default (context=post, option_group=null, option_name=null)
         $this->assertEquals('f', $field->getNameAttr());
-        
+
         // Metabox context (also returns just name)
         $field->setContext('metabox');
         $this->assertEquals('f', $field->getNameAttr());
-        
+
         // Option Group (context=option, option_group set)
         $field->setContext('option');
         $field->setOptionValues([], 'my_group');
         $this->assertEquals('my_group[f]', $field->getNameAttr());
-        
+
         // Option Name is array, option_group is null (legacy fallback)
         $fieldArrayOptionName = Field::make('text', 'f', 'F');
         $fieldArrayOptionName->setContext('option');
@@ -441,7 +443,6 @@ class FieldTest extends \PHPUnit\Framework\TestCase
         $propGroup = $ref->getProperty('option_group');
         $propGroup->setValue($fieldArrayOptionName, null);
         $this->assertEquals('f', $fieldArrayOptionName->getNameAttr());
-
 
         // Option Name is string, option_group is null
         $fieldStringOptionName = Field::make('text', 'f', 'F');
@@ -476,7 +477,7 @@ class FieldTest extends \PHPUnit\Framework\TestCase
         $mockTemplateLoader = \Mockery::mock('alias:HyperFields\TemplateLoader');
         $mockTemplateLoader->shouldReceive('renderField')
             ->once()
-            ->with(\Mockery::on(function($args) {
+            ->with(\Mockery::on(function ($args) {
                 return isset($args['name']) && $args['name'] === 'f'
                     && isset($args['name_attr']) && $args['name_attr'] === 'my_option_group[f]';
             }), 'default_value');

@@ -85,8 +85,10 @@ class LibraryBootstrapTest extends TestCase
             HYPERFIELDS_PLUGIN_URL
         );
         $this->assertSame($version, HYPERFIELDS_VERSION);
-        // HYPERPRESS_VERSION and HYPERPRESS_PLUGIN_URL are owned by HyperPress-Core, not HyperFields.
-        $this->assertFalse(defined('HYPERPRESS_VERSION'));
-        $this->assertFalse(defined('HYPERPRESS_PLUGIN_URL'));
+        // LibraryBootstrap provides fallback HYPERPRESS_* constants when used standalone.
+        $this->assertTrue(defined('HYPERPRESS_VERSION'));
+        $this->assertTrue(defined('HYPERPRESS_PLUGIN_URL'));
+        $this->assertSame($version, HYPERPRESS_VERSION);
+        $this->assertSame(HYPERFIELDS_PLUGIN_URL, HYPERPRESS_PLUGIN_URL);
     }
 }

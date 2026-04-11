@@ -32,15 +32,16 @@ class TermMetaContainerTest extends \PHPUnit\Framework\TestCase
         Functions\when('apply_filters')->returnArg();
 
         // Mock get_term with default behavior - tests can override with expect()
-        Functions\when('get_term')->alias(function($term_id, $taxonomy = '') {
+        Functions\when('get_term')->alias(function ($term_id, $taxonomy = '') {
             if ($term_id instanceof \stdClass) {
                 return $term_id;
             }
+
             return (object) [
                 'term_id' => $term_id,
                 'taxonomy' => $taxonomy ?: 'category',
                 'slug' => 'test-term-' . $term_id,
-                'name' => 'Test Term ' . $term_id
+                'name' => 'Test Term ' . $term_id,
             ];
         });
 
@@ -56,12 +57,13 @@ class TermMetaContainerTest extends \PHPUnit\Framework\TestCase
     }
 
     /**
-     * Helper method to call protected shouldShowForTerm method using reflection
+     * Helper method to call protected shouldShowForTerm method using reflection.
      */
     private function callShouldShowForTerm(): bool
     {
         $reflection = new \ReflectionClass($this->container);
         $method = $reflection->getMethod('shouldShowForTerm');
+
         return $method->invoke($this->container);
     }
 
@@ -191,7 +193,7 @@ class TermMetaContainerTest extends \PHPUnit\Framework\TestCase
     public function testSetTermIdWithInvalidTerm()
     {
         $error = new \WP_Error('invalid_term', 'Invalid term');
-        
+
         // Override the setup alias with a specific return for this test
         Functions\when('get_term')->justReturn($error);
 
@@ -252,7 +254,7 @@ class TermMetaContainerTest extends \PHPUnit\Framework\TestCase
     {
         $term = (object) [
             'term_id' => 456,
-            'taxonomy' => 'category'
+            'taxonomy' => 'category',
         ];
 
         $field = \Mockery::mock(Field::class);

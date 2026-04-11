@@ -6,13 +6,13 @@ namespace HyperFields\Tests\Unit;
 
 use Brain\Monkey;
 use Brain\Monkey\Functions;
+use HyperFields\Container\PostMetaContainer;
+use HyperFields\Container\TermMetaContainer;
+use HyperFields\Container\UserMetaContainer;
 use HyperFields\Field;
 use HyperFields\HyperFields;
 use HyperFields\OptionsPage;
 use HyperFields\OptionsSection;
-use HyperFields\Container\PostMetaContainer;
-use HyperFields\Container\TermMetaContainer;
-use HyperFields\Container\UserMetaContainer;
 use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
 
 class HyperFieldsTest extends \PHPUnit\Framework\TestCase
@@ -90,10 +90,11 @@ class HyperFieldsTest extends \PHPUnit\Framework\TestCase
 
     public function testGetOptions()
     {
-        Functions\when('get_option')->alias(function($option, $default = []) {
+        Functions\when('get_option')->alias(function ($option, $default = []) {
             if ($option === 'test_option') {
                 return ['key' => 'value'];
             }
+
             return $default;
         });
 
@@ -105,7 +106,7 @@ class HyperFieldsTest extends \PHPUnit\Framework\TestCase
 
     public function testGetOptionsReturnsDefaultWhenNotArray()
     {
-        Functions\when('get_option')->alias(function($option, $default = []) {
+        Functions\when('get_option')->alias(function ($option, $default = []) {
             return 'string_value'; // Not an array
         });
 
@@ -117,7 +118,7 @@ class HyperFieldsTest extends \PHPUnit\Framework\TestCase
 
     public function testGetOptionsWithCustomDefault()
     {
-        Functions\when('get_option')->alias(function($option, $default = []) {
+        Functions\when('get_option')->alias(function ($option, $default = []) {
             return $default;
         });
 
@@ -128,10 +129,11 @@ class HyperFieldsTest extends \PHPUnit\Framework\TestCase
 
     public function testGetFieldValue()
     {
-        Functions\when('get_option')->alias(function($option, $default = []) {
+        Functions\when('get_option')->alias(function ($option, $default = []) {
             if ($option === 'test_option') {
                 return ['field1' => 'value1'];
             }
+
             return $default;
         });
 
@@ -142,7 +144,7 @@ class HyperFieldsTest extends \PHPUnit\Framework\TestCase
 
     public function testGetFieldValueReturnsDefault()
     {
-        Functions\when('get_option')->alias(function($option, $default = []) {
+        Functions\when('get_option')->alias(function ($option, $default = []) {
             return [];
         });
 
@@ -153,14 +155,15 @@ class HyperFieldsTest extends \PHPUnit\Framework\TestCase
 
     public function testSetFieldValue()
     {
-        Functions\when('get_option')->alias(function($option, $default = []) {
+        Functions\when('get_option')->alias(function ($option, $default = []) {
             if ($option === 'test_option') {
                 return ['existing' => 'value'];
             }
+
             return $default;
         });
 
-        Functions\when('update_option')->alias(function($option, $value) {
+        Functions\when('update_option')->alias(function ($option, $value) {
             return true;
         });
 
@@ -171,14 +174,15 @@ class HyperFieldsTest extends \PHPUnit\Framework\TestCase
 
     public function testDeleteFieldOption()
     {
-        Functions\when('get_option')->alias(function($option, $default = []) {
+        Functions\when('get_option')->alias(function ($option, $default = []) {
             if ($option === 'test_option') {
                 return ['field1' => 'value1', 'field2' => 'value2'];
             }
+
             return $default;
         });
 
-        Functions\when('update_option')->alias(function($option, $value) {
+        Functions\when('update_option')->alias(function ($option, $value) {
             return true;
         });
 
@@ -189,10 +193,11 @@ class HyperFieldsTest extends \PHPUnit\Framework\TestCase
 
     public function testDeleteFieldOptionReturnsFalseWhenFieldNotFound()
     {
-        Functions\when('get_option')->alias(function($option, $default = []) {
+        Functions\when('get_option')->alias(function ($option, $default = []) {
             if ($option === 'test_option') {
                 return ['field1' => 'value1'];
             }
+
             return $default;
         });
 

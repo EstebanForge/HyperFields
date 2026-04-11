@@ -22,7 +22,7 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * Options example: get/save/delete using default option group (hyperpress_options)
+ * Options example: get/save/delete using default option group (hyperpress_options).
  */
 function hyperfields_helper_examples_options(): void
 {
@@ -42,7 +42,7 @@ function hyperfields_helper_examples_options(): void
 // Activate with: add_action('init', 'hyperfields_helper_examples_options');
 
 /**
- * Post meta example: get/save/delete with a specific post ID
+ * Post meta example: get/save/delete with a specific post ID.
  */
 function hyperfields_helper_examples_post(): void
 {
@@ -62,7 +62,7 @@ function hyperfields_helper_examples_post(): void
 // Activate with: add_action('init', 'hyperfields_helper_examples_post');
 
 /**
- * User meta example: get/save/delete for the current user
+ * User meta example: get/save/delete for the current user.
  */
 function hyperfields_helper_examples_user(): void
 {
@@ -74,7 +74,7 @@ function hyperfields_helper_examples_user(): void
     $user_ctx = 'user_' . $user_id;
 
     // Save (sanitize as textarea)
-    hp_save_field('profile_bio', "Short bio here", $user_ctx, ['type' => 'textarea']);
+    hp_save_field('profile_bio', 'Short bio here', $user_ctx, ['type' => 'textarea']);
 
     // Get with default
     $bio = hp_get_field('profile_bio', $user_ctx, ['default' => '']);
@@ -86,7 +86,7 @@ function hyperfields_helper_examples_user(): void
 // Activate with: add_action('init', 'hyperfields_helper_examples_user');
 
 /**
- * Term meta example: get/save/delete for a term ID
+ * Term meta example: get/save/delete for a term ID.
  */
 function hyperfields_helper_examples_term(): void
 {

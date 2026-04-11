@@ -243,12 +243,12 @@ class ConditionalLogicTest extends \PHPUnit\Framework\TestCase
         $this->assertEquals([
             'field' => 'field1',
             'operator' => '=',
-            'value' => 'value1'
+            'value' => 'value1',
         ], $array['conditions'][0]);
         $this->assertEquals([
             'field' => 'field2',
             'operator' => '=',
-            'value' => 'value2'
+            'value' => 'value2',
         ], $array['conditions'][1]);
     }
 
@@ -278,13 +278,13 @@ class ConditionalLogicTest extends \PHPUnit\Framework\TestCase
             [
                 'field' => 'field1',
                 'operator' => '=',
-                'value' => 'value1'
+                'value' => 'value1',
             ],
             [
                 'field' => 'field2',
                 'operator' => '!=',
-                'value' => 'value2'
-            ]
+                'value' => 'value2',
+            ],
         ];
 
         $logic = ConditionalLogic::factory($conditions);
@@ -303,6 +303,7 @@ class ConditionalLogicTest extends \PHPUnit\Framework\TestCase
                 if ($hook === 'hyperfields/conditional_logic_evaluate' && $op === 'CUSTOM_OP') {
                     return true;
                 }
+
                 return $default;
             });
 
@@ -369,7 +370,7 @@ class ConditionalLogicTest extends \PHPUnit\Framework\TestCase
     {
         $expectedOperators = [
             '=', '!=', '>', '<', '>=', '<=', 'IN', 'NOT IN',
-            'CONTAINS', 'NOT CONTAINS', 'EMPTY', 'NOT EMPTY'
+            'CONTAINS', 'NOT CONTAINS', 'EMPTY', 'NOT EMPTY',
         ];
 
         $this->assertEquals($expectedOperators, ConditionalLogic::OPERATORS);

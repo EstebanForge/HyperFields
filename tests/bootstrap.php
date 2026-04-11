@@ -31,11 +31,13 @@ if (!defined('DAY_IN_SECONDS')) {
 
 // Mock WP_Error class
 if (!class_exists('WP_Error')) {
-    class WP_Error {
+    class WP_Error
+    {
         public $errors = [];
         public $error_data = [];
 
-        public function __construct($code = '', $message = '', $data = '') {
+        public function __construct($code = '', $message = '', $data = '')
+        {
             if (empty($code)) {
                 return;
             }
@@ -76,10 +78,11 @@ Brain\Monkey\Functions\when('update_post_meta')->justReturn(true);
 Brain\Monkey\Functions\when('update_user_meta')->justReturn(true);
 Brain\Monkey\Functions\when('update_term_meta')->justReturn(true);
 Brain\Monkey\Functions\when('get_post_type')->justReturn('post');
-Brain\Monkey\Functions\when('get_term')->alias(function($term_id, $taxonomy = '') {
-    if ($term_id instanceof \stdClass) {
+Brain\Monkey\Functions\when('get_term')->alias(function ($term_id, $taxonomy = '') {
+    if ($term_id instanceof stdClass) {
         return $term_id;
     }
+
     return (object) ['term_id' => $term_id, 'taxonomy' => $taxonomy, 'slug' => 'test-term'];
 });
 

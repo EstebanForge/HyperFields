@@ -237,7 +237,7 @@ class PostMetaContainerTest extends \PHPUnit\Framework\TestCase
         Functions\when('wp_verify_nonce')->justReturn(true);
         Functions\when('get_post_type')->justReturn('post');
         Functions\when('get_post_type_object')->justReturn((object) [
-            'cap' => (object) ['edit_post' => 'edit_posts']
+            'cap' => (object) ['edit_post' => 'edit_posts'],
         ]);
         Functions\when('current_user_can')->justReturn(true);
 

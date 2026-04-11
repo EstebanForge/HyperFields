@@ -29,12 +29,12 @@ class LogTest extends \PHPUnit\Framework\TestCase
             'error' => false,
         ]);
 
-        Functions\when('wp_mkdir_p')->alias(function($dir) {
-            return @mkdir($dir, 0755, true);
+        Functions\when('wp_mkdir_p')->alias(function ($dir) {
+            return @mkdir($dir, 0o755, true);
         });
 
         Functions\when('sanitize_file_name')->returnArg();
-        Functions\when('wp_hash')->alias(function($data) {
+        Functions\when('wp_hash')->alias(function ($data) {
             return md5($data);
         });
 

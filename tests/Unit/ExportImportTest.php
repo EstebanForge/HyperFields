@@ -173,7 +173,7 @@ class ExportImportTest extends \PHPUnit\Framework\TestCase
         Functions\when('get_option')->justReturn($existing);
         Functions\when('update_option')->justReturn(true);
 
-        $json   = $this->makeExportJson(['my_option' => $incoming]);
+        $json = $this->makeExportJson(['my_option' => $incoming]);
         $result = ExportImport::importOptions($json);
 
         $this->assertTrue($result['success']);
@@ -189,6 +189,7 @@ class ExportImportTest extends \PHPUnit\Framework\TestCase
         Functions\when('get_option')->justReturn($existing);
         Functions\when('update_option')->alias(function (string $name, $value) use (&$merged) {
             $merged = $value;
+
             return true;
         });
 
@@ -206,6 +207,7 @@ class ExportImportTest extends \PHPUnit\Framework\TestCase
         $updateCalled = false;
         Functions\when('update_option')->alias(function () use (&$updateCalled) {
             $updateCalled = true;
+
             return true;
         });
 
@@ -224,6 +226,7 @@ class ExportImportTest extends \PHPUnit\Framework\TestCase
         $updateCalled = false;
         Functions\when('update_option')->alias(function () use (&$updateCalled) {
             $updateCalled = true;
+
             return true;
         });
 
@@ -243,6 +246,7 @@ class ExportImportTest extends \PHPUnit\Framework\TestCase
         Functions\when('get_option')->justReturn($existingData);
         Functions\when('update_option')->alias(function (string $name, $value) use (&$merged) {
             $merged = $value;
+
             return true;
         });
 
@@ -263,6 +267,7 @@ class ExportImportTest extends \PHPUnit\Framework\TestCase
         Functions\when('get_option')->justReturn($existing);
         Functions\when('update_option')->alias(function (string $name, $value) use (&$written) {
             $written = $value;
+
             return true;
         });
 
@@ -302,7 +307,7 @@ class ExportImportTest extends \PHPUnit\Framework\TestCase
 
     public function testImportOptionsMissingOptionsKey(): void
     {
-        $json   = json_encode(['version' => '1.0', 'type' => 'hyperfields_export']);
+        $json = json_encode(['version' => '1.0', 'type' => 'hyperfields_export']);
         $result = ExportImport::importOptions((string) $json);
 
         $this->assertFalse($result['success']);
@@ -318,10 +323,11 @@ class ExportImportTest extends \PHPUnit\Framework\TestCase
         $transientKey = null;
         Functions\when('set_transient')->alias(function (string $key, $value, $exp) use (&$transientKey) {
             $transientKey = $key;
+
             return true;
         });
 
-        $json   = $this->makeExportJson(['my_option' => ['key' => 'new_value']]);
+        $json = $this->makeExportJson(['my_option' => ['key' => 'new_value']]);
         $result = ExportImport::importOptions($json);
 
         $this->assertTrue($result['success']);
@@ -448,7 +454,7 @@ class ExportImportTest extends \PHPUnit\Framework\TestCase
         // Incoming has keys but none match the prefix → continue, nothing imported.
         Functions\when('get_option')->justReturn([]);
 
-        $json   = $this->makeExportJson(['my_option' => ['other_key' => 'val']]);
+        $json = $this->makeExportJson(['my_option' => ['other_key' => 'val']]);
         $result = ExportImport::importOptions($json, [], 'myp_');
 
         $this->assertFalse($result['success']);
@@ -461,7 +467,7 @@ class ExportImportTest extends \PHPUnit\Framework\TestCase
         Functions\when('get_option')->justReturn($data);
         Functions\when('update_option')->justReturn(false); // unchanged → false
 
-        $json   = $this->makeExportJson(['my_option' => $data]);
+        $json = $this->makeExportJson(['my_option' => $data]);
         $result = ExportImport::importOptions($json);
 
         $this->assertTrue($result['success']);
@@ -482,6 +488,7 @@ class ExportImportTest extends \PHPUnit\Framework\TestCase
         $deleteCalled = false;
         Functions\when('delete_transient')->alias(function () use (&$deleteCalled) {
             $deleteCalled = true;
+
             return true;
         });
 

@@ -27,6 +27,7 @@ class ContentExportImportTest extends \PHPUnit\Framework\TestCase
         });
         Functions\when('get_post')->justReturn(null);
         Functions\when('get_page_by_path')->justReturn(null);
+        Functions\when('get_posts')->justReturn([]);
     }
 
     protected function tearDown(): void
@@ -96,4 +97,3 @@ class ContentExportImportTest extends \PHPUnit\Framework\TestCase
         $this->assertTrue($result['actions'][0]['dry_run']);
     }
 }
-

@@ -27,7 +27,7 @@ class PostMetaContainerTest extends \PHPUnit\Framework\TestCase
         Functions\when('wp_nonce_field')->justReturn('');
         Functions\when('sanitize_text_field')->returnArg();
         Functions\when('get_post_type_object')->justReturn((object) [
-            'cap' => (object) ['edit_post' => 'edit_posts']
+            'cap' => (object) ['edit_post' => 'edit_posts'],
         ]);
         Functions\when('get_post')->justReturn((object) ['post_name' => 'test-post']);
         Functions\when('current_user_can')->justReturn(true);
@@ -172,7 +172,7 @@ class PostMetaContainerTest extends \PHPUnit\Framework\TestCase
         // DOING_AUTOSAVE not defined = false
         $_POST = [
             'post_ID' => 123,
-            '_hyperfields_metabox_nonce_test_container' => 'valid_nonce'
+            '_hyperfields_metabox_nonce_test_container' => 'valid_nonce',
         ];
 
         // Mock nonce verification with when
@@ -181,7 +181,7 @@ class PostMetaContainerTest extends \PHPUnit\Framework\TestCase
 
         Functions\when('get_post_type')->justReturn('post');
         Functions\when('get_post_type_object')->justReturn((object) [
-            'cap' => (object) ['edit_post' => 'edit_posts']
+            'cap' => (object) ['edit_post' => 'edit_posts'],
         ]);
         Functions\when('current_user_can')->justReturn(true);
 
@@ -214,7 +214,7 @@ class PostMetaContainerTest extends \PHPUnit\Framework\TestCase
         $_POST = [
             'post_ID' => 123,
             'test_field' => 'test_value',
-            '_hyperfields_metabox_nonce_test_container' => 'valid_nonce'
+            '_hyperfields_metabox_nonce_test_container' => 'valid_nonce',
         ];
 
         Functions\when('wp_create_nonce')->justReturn('valid_nonce');
@@ -222,7 +222,7 @@ class PostMetaContainerTest extends \PHPUnit\Framework\TestCase
 
         Functions\when('get_post_type')->justReturn('post');
         Functions\when('get_post_type_object')->justReturn((object) [
-            'cap' => (object) ['edit_post' => 'edit_posts']
+            'cap' => (object) ['edit_post' => 'edit_posts'],
         ]);
         Functions\when('current_user_can')->justReturn(true);
 
@@ -230,7 +230,7 @@ class PostMetaContainerTest extends \PHPUnit\Framework\TestCase
         Functions\when('update_post_meta')->justReturn(true);
 
         $this->container->save();
-        
+
         // Assertion to ensure test is useful
         $this->assertTrue(true);
     }
@@ -246,7 +246,7 @@ class PostMetaContainerTest extends \PHPUnit\Framework\TestCase
 
         // Rely on setUp stub for get_post_type ('post')
         Functions\when('get_post_type')->justReturn('post');
-        
+
         Functions\expect('add_meta_box')
             ->once()
             ->with(

@@ -6,8 +6,8 @@ namespace HyperFields\Tests\Unit;
 
 use Brain\Monkey;
 use Brain\Monkey\Functions;
-use HyperFields\Registry;
 use HyperFields\Field;
+use HyperFields\Registry;
 use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
 
 class RegistryTest extends \PHPUnit\Framework\TestCase
@@ -37,7 +37,7 @@ class RegistryTest extends \PHPUnit\Framework\TestCase
         Functions\when('sanitize_hex_color')->returnArg();
         Functions\when('absint')->returnArg();
         Functions\when('is_email')->justReturn(true);
-        
+
         // Ensure apply_filters returns the value (2nd arg)
         Functions\when('apply_filters')->returnArg(2);
     }
@@ -178,7 +178,7 @@ class RegistryTest extends \PHPUnit\Framework\TestCase
 
         $this->assertTrue($registry->hasFieldGroup('group1'));
         $this->assertFalse($registry->hasFieldGroup('non_existent'));
-        
+
         $retrievedGroup = $registry->getFieldGroup('group1');
         $this->assertSame($fields, $retrievedGroup);
 
@@ -198,10 +198,10 @@ class RegistryTest extends \PHPUnit\Framework\TestCase
         $registry->registerField('context1', $field);
 
         $this->assertTrue($registry->hasField('context1', 'field1'));
-        
+
         $registry->removeField('context1', 'field1');
         $this->assertFalse($registry->hasField('context1', 'field1'));
-        
+
         // Test removing non-existent field (should not throw)
         $registry->removeField('context1', 'non_existent');
     }
@@ -239,13 +239,13 @@ class RegistryTest extends \PHPUnit\Framework\TestCase
     public function testInitAndRegisterAll()
     {
         $registry = Registry::getInstance();
-        
+
         // Test init adds action
         $has_action = false;
         Functions\expect('add_action')
             ->once()
             ->with('init', [$registry, 'registerAll'])
-            ->andReturnUsing(function() use (&$has_action) {
+            ->andReturnUsing(function () use (&$has_action) {
                 $has_action = true;
             });
 
@@ -257,18 +257,18 @@ class RegistryTest extends \PHPUnit\Framework\TestCase
         Functions\expect('do_action')
             ->once()
             ->with('hyperfields/register')
-            ->andReturnUsing(function() use (&$action_triggered) {
+            ->andReturnUsing(function () use (&$action_triggered) {
                 $action_triggered = true;
             });
 
         Functions\when('is_admin')->justReturn(true);
-        
+
         Functions\expect('add_action')
             ->atLeast()->times(1)
             ->with('add_meta_boxes', [$registry, 'registerPostMetaBoxes']);
-        
+
         // We expect other admin hooks too, but testing one confirms execution path
-        
+
         $registry->registerAll();
         $this->assertTrue($action_triggered);
     }
@@ -305,7 +305,7 @@ class RegistryTest extends \PHPUnit\Framework\TestCase
         Functions\expect('current_user_can')
             ->with('edit_user', 456)
             ->andReturn(true);
-            
+
         Functions\expect('update_user_meta')
             ->once()
             ->with(456, 'user_field', 'user_value')
@@ -327,7 +327,7 @@ class RegistryTest extends \PHPUnit\Framework\TestCase
         Functions\expect('current_user_can')
             ->with('manage_categories')
             ->andReturn(true);
-            
+
         Functions\expect('update_term_meta')
             ->once()
             ->with(789, 'term_field', 'term_value')
@@ -380,7 +380,7 @@ class RegistryTest extends \PHPUnit\Framework\TestCase
         } finally {
             $output = ob_get_clean();
         }
-        
+
         $this->assertIsString($output);
     }
 
@@ -426,7 +426,7 @@ class RegistryTest extends \PHPUnit\Framework\TestCase
         }
 
         $this->assertIsString($output);
-        
+
         unset($_GET['tag_ID']);
     }
 
@@ -436,13 +436,13 @@ class RegistryTest extends \PHPUnit\Framework\TestCase
         $registry = Registry::getInstance();
         $field = Field::make('text', 'option_field', 'Option Field')
             ->setContext('option'); // Context is option
-        
+
         // Register in post context to trigger render via renderPostMetaBox
         $registry->registerField('post', $field);
 
         Functions\expect('wp_nonce_field');
         Functions\expect('get_the_ID')->andReturn(123);
-        
+
         // Expect get_option call
         Functions\expect('get_option')->andReturn('value');
         Functions\expect('apply_filters')->andReturn('option_field');
@@ -460,39 +460,39 @@ class RegistryTest extends \PHPUnit\Framework\TestCase
     public function testRegisterAdminHooksNotAdmin()
     {
         $registry = Registry::getInstance();
-        
+
         // Mock is_admin to return false
         Functions\when('is_admin')->justReturn(false);
-        
+
         // Expect NO add_action calls for admin hooks
         // We verify this by ensuring registerPostMetaBoxes is NOT hooked
         $hooked = false;
         Functions\expect('add_action')
             ->with('add_meta_boxes', [$registry, 'registerPostMetaBoxes'])
             ->never();
-            
+
         // Trigger registerAll which calls registerAdminHooks
         $registry->registerAll();
-        
+
         // To satisfy the expectation, we just rely on ->never()
-        $this->assertTrue(true); 
+        $this->assertTrue(true);
     }
 
     public function testSavePostFieldsFailures()
     {
         $registry = Registry::getInstance();
-        
+
         // Case 1: No nonce set
         $registry->savePostFields(123);
         // Expect no updates, implicit pass if no errors/mocks triggered
         $this->assertTrue(true);
-        
+
         // Case 2: Invalid nonce
         $_POST['hyperpress_post_fields_nonce'] = 'invalid';
         Functions\expect('wp_verify_nonce')->with('invalid', 'hyperpress_post_fields')->andReturn(false);
         $registry->savePostFields(123);
         $this->assertTrue(true);
-        
+
         // Case 3: Permission denied
         $_POST['hyperpress_post_fields_nonce'] = 'valid';
         Functions\expect('wp_verify_nonce')->with('valid', 'hyperpress_post_fields')->andReturn(true);
