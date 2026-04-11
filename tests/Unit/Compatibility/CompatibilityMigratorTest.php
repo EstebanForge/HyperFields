@@ -64,9 +64,7 @@ final class InMemoryStore implements StoreInterface
     /**
      * @param array<string, mixed> $data
      */
-    public function __construct(private array $data = [])
-    {
-    }
+    public function __construct(private array $data = []) {}
 
     public function get(string $key, mixed $default = null): mixed
     {
@@ -96,4 +94,3 @@ final class InMemoryStore implements StoreInterface
         return $this->data;
     }
 }
-

@@ -62,7 +62,7 @@ class OptionFieldTest extends \PHPUnit\Framework\TestCase
 
     public function testGetValueWithArrayStorage()
     {
-        Functions\when('get_option')->alias(function($name) {
+        Functions\when('get_option')->alias(function ($name) {
             return ['field_name' => 'stored_value'];
         });
 
@@ -86,7 +86,7 @@ class OptionFieldTest extends \PHPUnit\Framework\TestCase
 
     public function testSetValueWithArrayStorage()
     {
-        Functions\when('get_option')->alias(function($name) {
+        Functions\when('get_option')->alias(function ($name) {
             return ['existing' => 'value'];
         });
         Functions\when('sanitize_text_field')->returnArg();
@@ -110,7 +110,7 @@ class OptionFieldTest extends \PHPUnit\Framework\TestCase
 
     public function testDeleteValueWithArrayStorage()
     {
-        Functions\when('get_option')->alias(function($name) {
+        Functions\when('get_option')->alias(function ($name) {
             return ['field_name' => 'value', 'other_field' => 'other'];
         });
 
@@ -122,7 +122,7 @@ class OptionFieldTest extends \PHPUnit\Framework\TestCase
 
     public function testDeleteValueWithEmptyArray()
     {
-        Functions\when('get_option')->alias(function($name) {
+        Functions\when('get_option')->alias(function ($name) {
             return ['field_name' => 'value'];
         });
 

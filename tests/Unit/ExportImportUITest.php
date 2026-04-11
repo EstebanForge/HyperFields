@@ -41,7 +41,7 @@ class ExportImportUITest extends \PHPUnit\Framework\TestCase
 
     protected function tearDown(): void
     {
-        $_POST  = [];
+        $_POST = [];
         $_FILES = [];
         Monkey\tearDown();
         parent::tearDown();
@@ -310,7 +310,7 @@ class ExportImportUITest extends \PHPUnit\Framework\TestCase
         $file = $this->makeUploadedFile('{}');
         $file['size'] = 3 * 1024 * 1024; // 3 MB — over limit
 
-        $_POST  = ['hf_preview_submit' => '1', 'hf_preview_nonce' => 'test_nonce'];
+        $_POST = ['hf_preview_submit' => '1', 'hf_preview_nonce' => 'test_nonce'];
         $_FILES = ['hf_import_file' => $file];
 
         Functions\when('is_uploaded_file')->justReturn(true);
@@ -327,7 +327,7 @@ class ExportImportUITest extends \PHPUnit\Framework\TestCase
     {
         $file = $this->makeUploadedFile('{not valid json}');
 
-        $_POST  = ['hf_preview_submit' => '1', 'hf_preview_nonce' => 'test_nonce'];
+        $_POST = ['hf_preview_submit' => '1', 'hf_preview_nonce' => 'test_nonce'];
         $_FILES = ['hf_import_file' => $file];
 
         Functions\when('is_uploaded_file')->justReturn(true);
@@ -345,7 +345,7 @@ class ExportImportUITest extends \PHPUnit\Framework\TestCase
         $json = json_encode(['version' => '1.0', 'type' => 'hyperfields_export']);
         $file = $this->makeUploadedFile((string) $json);
 
-        $_POST  = ['hf_preview_submit' => '1', 'hf_preview_nonce' => 'test_nonce'];
+        $_POST = ['hf_preview_submit' => '1', 'hf_preview_nonce' => 'test_nonce'];
         $_FILES = ['hf_import_file' => $file];
 
         Functions\when('is_uploaded_file')->justReturn(true);
@@ -367,7 +367,7 @@ class ExportImportUITest extends \PHPUnit\Framework\TestCase
         ]);
         $file = $this->makeUploadedFile((string) $json);
 
-        $_POST  = ['hf_preview_submit' => '1', 'hf_preview_nonce' => 'test_nonce'];
+        $_POST = ['hf_preview_submit' => '1', 'hf_preview_nonce' => 'test_nonce'];
         $_FILES = ['hf_import_file' => $file];
 
         Functions\when('is_uploaded_file')->justReturn(true);
@@ -392,7 +392,7 @@ class ExportImportUITest extends \PHPUnit\Framework\TestCase
         ]);
         $file = $this->makeUploadedFile((string) $json);
 
-        $_POST  = ['hf_preview_submit' => '1', 'hf_preview_nonce' => 'test_nonce'];
+        $_POST = ['hf_preview_submit' => '1', 'hf_preview_nonce' => 'test_nonce'];
         $_FILES = ['hf_import_file' => $file];
 
         Functions\when('is_uploaded_file')->justReturn(true);
@@ -416,7 +416,7 @@ class ExportImportUITest extends \PHPUnit\Framework\TestCase
         // An empty file causes the "Could not read" branch (empty string check).
         $file = $this->makeUploadedFile(''); // zero-byte file
 
-        $_POST  = ['hf_preview_submit' => '1', 'hf_preview_nonce' => 'test_nonce'];
+        $_POST = ['hf_preview_submit' => '1', 'hf_preview_nonce' => 'test_nonce'];
         $_FILES = ['hf_import_file' => $file];
 
         Functions\when('is_uploaded_file')->justReturn(true);
@@ -443,7 +443,7 @@ class ExportImportUITest extends \PHPUnit\Framework\TestCase
         ]);
         $file = $this->makeUploadedFile((string) $json);
 
-        $_POST  = ['hf_preview_submit' => '1', 'hf_preview_nonce' => 'test_nonce'];
+        $_POST = ['hf_preview_submit' => '1', 'hf_preview_nonce' => 'test_nonce'];
         $_FILES = ['hf_import_file' => $file];
 
         Functions\when('is_uploaded_file')->justReturn(true);
@@ -475,7 +475,7 @@ class ExportImportUITest extends \PHPUnit\Framework\TestCase
         ]);
         $file = $this->makeUploadedFile((string) $json);
 
-        $_POST  = ['hf_preview_submit' => '1', 'hf_preview_nonce' => 'test_nonce'];
+        $_POST = ['hf_preview_submit' => '1', 'hf_preview_nonce' => 'test_nonce'];
         $_FILES = ['hf_import_file' => $file];
 
         Functions\when('is_uploaded_file')->justReturn(true);

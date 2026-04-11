@@ -44,12 +44,13 @@ class UserMetaContainerTest extends \PHPUnit\Framework\TestCase
     }
 
     /**
-     * Helper method to call protected userHasRequiredRole method using reflection
+     * Helper method to call protected userHasRequiredRole method using reflection.
      */
     private function callUserHasRequiredRole(int $user_id): bool
     {
         $reflection = new \ReflectionClass($this->container);
         $method = $reflection->getMethod('userHasRequiredRole');
+
         return $method->invoke($this->container, $user_id);
     }
 
@@ -198,7 +199,7 @@ class UserMetaContainerTest extends \PHPUnit\Framework\TestCase
 
         $user = (object) [
             'ID' => 123,
-            'roles' => ['administrator', 'editor']
+            'roles' => ['administrator', 'editor'],
         ];
 
         Functions\expect('get_userdata')
@@ -215,7 +216,7 @@ class UserMetaContainerTest extends \PHPUnit\Framework\TestCase
 
         $user = (object) [
             'ID' => 123,
-            'roles' => ['editor', 'author']
+            'roles' => ['editor', 'author'],
         ];
 
         Functions\expect('get_userdata')
@@ -343,7 +344,7 @@ class UserMetaContainerTest extends \PHPUnit\Framework\TestCase
     {
         $user = (object) [
             'ID' => 456,
-            'display_name' => 'Test User'
+            'display_name' => 'Test User',
         ];
 
         $field = \Mockery::mock(Field::class);
@@ -392,7 +393,7 @@ class UserMetaContainerTest extends \PHPUnit\Framework\TestCase
 
         $user = (object) [
             'ID' => 123,
-            'roles' => ['editor', 'author']
+            'roles' => ['editor', 'author'],
         ];
 
         Functions\when('get_userdata')->justReturn($user);

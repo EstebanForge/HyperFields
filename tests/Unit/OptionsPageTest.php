@@ -6,9 +6,9 @@ namespace HyperFields\Tests\Unit;
 
 use Brain\Monkey;
 use Brain\Monkey\Functions;
+use HyperFields\Field;
 use HyperFields\OptionsPage;
 use HyperFields\OptionsSection;
-use HyperFields\Field;
 use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
 
 class OptionsPageTest extends \PHPUnit\Framework\TestCase
@@ -39,9 +39,9 @@ class OptionsPageTest extends \PHPUnit\Framework\TestCase
         Functions\when('wp_hash')->justReturn('hash123');
         Functions\when('settings_fields')->justReturn('');
         Functions\when('do_settings_fields')->justReturn('');
-        
+
         // Mock submit_button to echo output using alias
-        Functions\when('submit_button')->alias(function($text, $type) {
+        Functions\when('submit_button')->alias(function ($text, $type) {
             echo '<button>' . $text . '</button>';
         });
 
@@ -250,7 +250,7 @@ class OptionsPageTest extends \PHPUnit\Framework\TestCase
             ->once()
             ->with('custom_option_name', [])
             ->andReturn([]);
-        
+
         $method->invoke($this->page);
         $values = $optionValuesProp->getValue($this->page);
         $this->assertEquals('default1', $values['field1']);
@@ -262,7 +262,7 @@ class OptionsPageTest extends \PHPUnit\Framework\TestCase
             ->once()
             ->with('custom_option_name', [])
             ->andReturn([]);
-        
+
         $method->invoke($this->page);
         $values = $optionValuesProp->getValue($this->page);
         $this->assertEquals('default1', $values['field1']);
@@ -373,7 +373,6 @@ class OptionsPageTest extends \PHPUnit\Framework\TestCase
         $this->assertEquals('existing_value', $result['non_checkbox_field']); // Should preserve existing value
     }
 
-
     #[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
     #[\PHPUnit\Framework\Attributes\PreserveGlobalState(false)]
     public function testSanitizeOptionsInvalidCompactInput()
@@ -406,11 +405,11 @@ class OptionsPageTest extends \PHPUnit\Framework\TestCase
                 'hyperpress_options',
                 ['sanitize_callback' => [$this->page, 'sanitizeOptions']]
             );
-        
+
         Functions\expect('add_settings_section')
             ->once()
             ->with('empty_section', '', '__return_false', 'hyperpress_options');
-        
+
         Functions\expect('add_settings_field')->never(); // Should not be called if section has no fields
 
         $this->page->registerSettings();
@@ -432,7 +431,7 @@ class OptionsPageTest extends \PHPUnit\Framework\TestCase
                 'hyperpress_options',
                 ['sanitize_callback' => [$this->page, 'sanitizeOptions']]
             );
-        
+
         // Ensure no add_settings_section or add_settings_field are called
         Functions\expect('add_settings_section')->never();
         Functions\expect('add_settings_field')->never();
@@ -569,7 +568,7 @@ class OptionsPageTest extends \PHPUnit\Framework\TestCase
         // Stub settings fields to avoid errors
         Functions\when('settings_fields')->justReturn('');
         Functions\when('do_settings_fields')->justReturn('');
-        Functions\when('submit_button')->alias(function() {
+        Functions\when('submit_button')->alias(function () {
             echo '<button>Custom Submit</button>';
         });
 
@@ -593,7 +592,7 @@ class OptionsPageTest extends \PHPUnit\Framework\TestCase
 
         Functions\when('settings_fields')->justReturn('');
         Functions\when('do_settings_fields')->justReturn('');
-        Functions\when('submit_button')->alias(function() {
+        Functions\when('submit_button')->alias(function () {
             echo '<button>Custom Submit</button>';
         });
 
@@ -628,7 +627,7 @@ class OptionsPageTest extends \PHPUnit\Framework\TestCase
         Functions\when('esc_attr')->returnArg();
         Functions\when('settings_fields')->justReturn('');
         Functions\when('do_settings_fields')->justReturn('');
-        Functions\when('submit_button')->alias(function() {
+        Functions\when('submit_button')->alias(function () {
             echo '<button>Custom Submit</button>';
         });
 

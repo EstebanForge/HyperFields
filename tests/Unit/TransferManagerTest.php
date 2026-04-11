@@ -29,9 +29,9 @@ class TransferManagerTest extends \PHPUnit\Framework\TestCase
 
         $manager->registerModule(
             'options',
-            exporter: static fn(array $context): array => ['value' => $context['value'] ?? 'x'],
-            importer: static fn(array $payload, array $context): array => ['imported' => $payload['value'] ?? null, 'ctx' => $context['ctx'] ?? null],
-            differ: static fn(array $payload, array $context): array => ['changed' => ($payload['value'] ?? null) !== ($context['expected'] ?? null)]
+            exporter: static fn (array $context): array => ['value' => $context['value'] ?? 'x'],
+            importer: static fn (array $payload, array $context): array => ['imported' => $payload['value'] ?? null, 'ctx' => $context['ctx'] ?? null],
+            differ: static fn (array $payload, array $context): array => ['changed' => ($payload['value'] ?? null) !== ($context['expected'] ?? null)]
         );
 
         $bundle = $manager->export([], ['value' => 'abc']);
@@ -48,4 +48,3 @@ class TransferManagerTest extends \PHPUnit\Framework\TestCase
         $this->assertSame('ok', $import['modules']['options']['ctx']);
     }
 }
-

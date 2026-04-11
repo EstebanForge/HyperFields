@@ -6,8 +6,8 @@ namespace HyperFields\Tests\Unit;
 
 use Brain\Monkey;
 use Brain\Monkey\Functions;
-use HyperFields\HyperFields;
 use HyperFields\Container\PostMetaContainer;
+use HyperFields\HyperFields;
 use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
 
 class HyperFieldsApiTest extends \PHPUnit\Framework\TestCase
@@ -94,7 +94,7 @@ class HyperFieldsApiTest extends \PHPUnit\Framework\TestCase
     {
         $container = HyperFields::createPostMetaContainer('test_meta', 'Test Meta');
         $container->where('page');
-        
+
         $this->assertInstanceOf(PostMetaContainer::class, $container);
     }
 }

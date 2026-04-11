@@ -6,8 +6,8 @@ namespace HyperFields\Tests\Unit;
 
 use Brain\Monkey;
 use Brain\Monkey\Functions;
-use HyperFields\OptionsSection;
 use HyperFields\Field;
+use HyperFields\OptionsSection;
 use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
 
 class OptionsSectionTest extends \PHPUnit\Framework\TestCase
