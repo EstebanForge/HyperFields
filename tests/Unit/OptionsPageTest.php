@@ -702,4 +702,175 @@ class OptionsPageTest extends \PHPUnit\Framework\TestCase
 
         $this->assertSame('my_field', $field->getName());
     }
+
+    // React Integration Tests
+
+    public function testGetReactFieldsReturnsEmptyArrayWhenNoReactFields()
+    {
+        $section = OptionsSection::make('test_section', 'Test Section');
+        $section->addField(Field::make('text', 'field1', 'Field 1'));
+        $section->addField(Field::make('textarea', 'field2', 'Field 2'));
+        $this->page->addSectionObject($section);
+
+        // getReactFields requires a tab_id, which matches the section_id
+        $reactFields = $this->page->getReactFields('test_section');
+
+        $this->assertIsArray($reactFields);
+        $this->assertEmpty($reactFields);
+    }
+
+    public function testGetReactFieldsReturnsReactFields()
+    {
+        $section = OptionsSection::make('test_section', 'Test Section');
+        $section->addField(Field::make('text', 'field1', 'Field 1'));
+        $section->addField(\HyperFields\ReactField::make('field2', 'React Field'));
+        $section->addField(Field::make('textarea', 'field3', 'Field 3'));
+        $this->page->addSectionObject($section);
+
+        $reactFields = $this->page->getReactFields('test_section');
+
+        $this->assertCount(1, $reactFields);
+        $this->assertIsArray($reactFields[0]);
+        $this->assertEquals('field2', $reactFields[0]['name']);
+    }
+
+    public function testGetReactFieldsFromMultipleSections()
+    {
+        $section1 = OptionsSection::make('section1', 'Section 1');
+        $section1->addField(\HyperFields\ReactField::make('react1', 'React 1'));
+        $section1->addField(Field::make('text', 'field1', 'Field 1'));
+
+        $section2 = OptionsSection::make('section2', 'Section 2');
+        $section2->addField(\HyperFields\ReactField::make('react2', 'React 2'));
+        $section2->addField(\HyperFields\ReactField::make('react3', 'React 3'));
+
+        $this->page->addSectionObject($section1);
+        $this->page->addSectionObject($section2);
+
+        // Get React fields from section1
+        $reactFields1 = $this->page->getReactFields('section1');
+        $this->assertCount(1, $reactFields1);
+        $this->assertEquals('react1', $reactFields1[0]['name']);
+
+        // Get React fields from section2
+        $reactFields2 = $this->page->getReactFields('section2');
+        $this->assertCount(2, $reactFields2);
+        $fieldNames = array_map(fn($f) => $f['name'], $reactFields2);
+        $this->assertContains('react2', $fieldNames);
+        $this->assertContains('react3', $fieldNames);
+    }
+
+    public function testHasReactFieldsReturnsFalseWhenNoReactFields()
+    {
+        $section = OptionsSection::make('test_section', 'Test Section');
+        $section->addField(Field::make('text', 'field1', 'Field 1'));
+        $this->page->addSectionObject($section);
+
+        $this->assertFalse($this->page->hasReactFields('test_section'));
+    }
+
+    public function testHasReactFieldsReturnsTrueWhenReactFieldsPresent()
+    {
+        $section = OptionsSection::make('test_section', 'Test Section');
+        $section->addField(\HyperFields\ReactField::make('react_field', 'React Field'));
+        $this->page->addSectionObject($section);
+
+        $this->assertTrue($this->page->hasReactFields('test_section'));
+    }
+
+    public function testEnqueueReactAssetsCanBeCalled()
+    {
+        $section = OptionsSection::make('test_section', 'Test Section');
+        $section->addField(\HyperFields\ReactField::make('react_field', 'React Field'));
+        $this->page->addSectionObject($section);
+
+        // The method always enqueues WordPress React dependencies first
+        Functions\expect('wp_enqueue_script')->with('wp-element')->once();
+        Functions\expect('wp_enqueue_script')->with('wp-components')->once();
+        Functions\expect('wp_enqueue_script')->with('wp-block-editor')->once();
+        Functions\expect('wp_enqueue_script')->with('wp-i18n')->once();
+
+        // Without HYPERPRESS_PLUGIN_URL, it returns early after enqueuing WP deps
+        // So the HyperFields-specific script/style/localize are not called
+        Functions\expect('wp_enqueue_script')->with('hyperfields-react-app')->never();
+        Functions\expect('wp_enqueue_style')->with('hyperfields-react-styles')->never();
+        Functions\expect('wp_localize_script')->never();
+
+        // Should not throw any errors even without constants defined
+        $this->page->enqueueReactAssets();
+    }
+
+    public function testEnqueueReactAssetsWithoutReactFields()
+    {
+        $section = OptionsSection::make('test_section', 'Test Section');
+        $section->addField(Field::make('text', 'field1', 'Field 1'));
+        $this->page->addSectionObject($section);
+
+        // Same behavior - enqueues WP deps, returns early without HyperPRESS_URL
+        Functions\expect('wp_enqueue_script')->with('wp-element')->once();
+        Functions\expect('wp_enqueue_script')->with('wp-components')->once();
+        Functions\expect('wp_enqueue_script')->with('wp-block-editor')->once();
+        Functions\expect('wp_enqueue_script')->with('wp-i18n')->once();
+
+        Functions\expect('wp_enqueue_script')->with('hyperfields-react-app')->never();
+        Functions\expect('wp_enqueue_style')->with('hyperfields-react-styles')->never();
+        Functions\expect('wp_localize_script')->never();
+
+        // Should not throw any errors
+        $this->page->enqueueReactAssets();
+    }
+
+    public function testReactFieldsToRenderProperty()
+    {
+        $section = OptionsSection::make('test_section', 'Test Section');
+        $section->addField(\HyperFields\ReactField::make('react_field', 'React Field'));
+
+        $this->page->addSectionObject($section);
+
+        // Use reflection to check the internal property
+        $reflection = new \ReflectionClass($this->page);
+        $property = $reflection->getProperty('reactFieldsToRender');
+        $property->setAccessible(true);
+
+        // Property should be initialized but empty before render
+        $this->assertIsArray($property->getValue($this->page));
+    }
+
+    public function testRenderPageWithReactFieldsIncludesRootContainer()
+    {
+        $section = OptionsSection::make('test_section', 'Test Section');
+        $section->addField(\HyperFields\ReactField::make('react_field', 'React Field', 'text'));
+
+        $this->page->addSectionObject($section);
+
+        Functions\when('get_option')->justReturn([]);
+        Functions\when('settings_errors')->justReturn('');
+        Functions\when('wp_create_nonce')->justReturn('test_nonce');
+
+        ob_start();
+        $this->page->renderPage();
+        $output = ob_get_clean();
+
+        // Should include React root container
+        $this->assertStringContainsString('id="hyperpress-react-root"', $output);
+    }
+
+    public function testRenderPageWithoutReactFieldsDoesNotIncludeRootContainer()
+    {
+        $section = OptionsSection::make('test_section', 'Test Section');
+        $section->addField(Field::make('text', 'field1', 'Field 1'));
+
+        $this->page->addSectionObject($section);
+
+        Functions\when('get_option')->justReturn([]);
+        Functions\when('settings_errors')->justReturn('');
+        Functions\when('wp_create_nonce')->justReturn('test_nonce');
+
+        ob_start();
+        $this->page->renderPage();
+        $output = ob_get_clean();
+
+        // Should not include React root container
+        $this->assertStringNotContainsString('id="hyperpress-react-root"', $output);
+    }
 }

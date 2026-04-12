@@ -42,12 +42,12 @@ class ReactField extends Field
     /**
      * Create a new ReactField instance.
      *
-     * @param string $type  Field type (must be a valid Field type).
      * @param string $name  Field name.
      * @param string $label Field label.
+     * @param string $type  Field type (default: 'text').
      * @return self
      */
-    public static function make(string $type, string $name, string $label): self
+    public static function make(string $name, string $label, string $type = 'text'): self
     {
         return new self($type, $name, $label);
     }
@@ -138,6 +138,16 @@ class ReactField extends Field
     }
 
     /**
+     * Get the useReact flag (alias for shouldUseReact).
+     *
+     * @return bool True if React should be used.
+     */
+    public function getUseReact(): bool
+    {
+        return $this->shouldUseReact();
+    }
+
+    /**
      * Get the React component name for this field.
      *
      * Returns the custom component if set, otherwise derives the
@@ -176,7 +186,7 @@ class ReactField extends Field
             'oembed' => 'OEmbedField',
         ];
 
-        return $componentMap[$this->type] ?? 'TextField';
+        return $componentMap[$this->getType()] ?? 'TextField';
     }
 
     /**
@@ -188,20 +198,78 @@ class ReactField extends Field
      */
     public function getReactProps(): array
     {
+        // Use parent's toArray() to access private properties
+        $parentData = parent::toArray();
+
         return array_merge([
-            'fieldType' => $this->type,
-            'fieldName' => $this->name,
-            'label' => $this->label,
-            'default' => $this->default,
-            'placeholder' => $this->placeholder,
-            'required' => $this->required,
-            'help' => $this->help,
-            'options' => $this->options,
-            'min' => $this->min,
-            'max' => $this->max,
-            'multiple' => $this->multiple,
-            'layout' => $this->layout,
+            'type' => $this->getType(),
+            'name' => $this->getName(),
+            'label' => $this->getLabel(),
+            'default' => $this->getDefault(),
+            'placeholder' => $this->getPlaceholder(),
+            'required' => $parentData['required'] ?? false,
+            'help' => $this->getHelp(),
+            'options' => $this->getOptions(),
+            'min' => $parentData['min'] ?? null,
+            'max' => $parentData['max'] ?? null,
+            'multiple' => $parentData['multiple'] ?? false,
+            'layout' => $parentData['layout'] ?? 'grid',
         ], $this->reactProps);
+    }
+
+    /**
+     * Get the required status.
+     *
+     * @return bool
+     */
+    public function getRequired(): bool
+    {
+        $data = parent::toArray();
+        return $data['required'] ?? false;
+    }
+
+    /**
+     * Get the multiple flag.
+     *
+     * @return bool
+     */
+    public function getMultiple(): bool
+    {
+        $data = parent::toArray();
+        return $data['multiple'] ?? false;
+    }
+
+    /**
+     * Get the min value.
+     *
+     * @return int|null
+     */
+    public function getMin(): ?int
+    {
+        $data = parent::toArray();
+        return $data['min'] ?? null;
+    }
+
+    /**
+     * Get the max value.
+     *
+     * @return int|null
+     */
+    public function getMax(): ?int
+    {
+        $data = parent::toArray();
+        return $data['max'] ?? null;
+    }
+
+    /**
+     * Get the layout.
+     *
+     * @return string
+     */
+    public function getLayout(): string
+    {
+        $data = parent::toArray();
+        return $data['layout'] ?? 'grid';
     }
 
     /**
@@ -259,7 +327,12 @@ class ReactField extends Field
             case 'useReact':
                 return $this->useReact;
             default:
-                return parent::__get($name);
+                // Try to call parent class getter if it exists
+                $method = 'get' . ucfirst($name);
+                if (method_exists($this, $method)) {
+                    return $this->$method();
+                }
+                return null;
         }
     }
 
