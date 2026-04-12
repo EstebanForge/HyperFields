@@ -28,6 +28,10 @@ class OptionsPage
      * @var array<string, string>
      */
     private array $compatibility_field_errors = [];
+    /**
+     * @var array<int, array>
+     */
+    private array $reactFieldsToRender = [];
 
     /**
      * Make.
@@ -376,11 +380,18 @@ class OptionsPage
     public function renderPage(): void
     {
         $active_tab = $this->getActiveTab();
+        $react_fields = $this->getReactFields($active_tab);
+
+        // If we have React fields, the enqueueAssets method will handle loading React
+        if (!empty($react_fields)) {
+            // Store React fields for later use in enqueueAssets
+            $this->reactFieldsToRender = $react_fields;
+        }
         ?>
         <div class="wrap hyperpress hyperpress-options-wrap">
             <h1><?php echo esc_html($this->page_title); ?></h1>
             <?php $this->renderTabs(); ?>
-            <form method="post" action="options.php">
+            <form method="post" action="options.php" id="hyperpress-options-form">
                 <input type="hidden" name="hyperpress_active_tab" value="<?php echo esc_attr($active_tab); ?>" />
                 <input type="hidden" name="hyperpress_active_section" value="<?php echo esc_attr($this->getActiveSection($active_tab)); ?>" />
                 <?php
@@ -417,6 +428,10 @@ class OptionsPage
             echo '<div class="hyperpress-fields-group">';
             do_settings_fields($this->option_name, $section_id);
             echo '</div>';
+        }
+        // React root container - React fields will be rendered here
+        if (!empty($react_fields)) {
+            echo '<div id="hyperpress-react-root" data-hyperpress-react></div>';
         }
         submit_button(
             esc_html__('Save Changes', 'api-for-htmx'),
@@ -772,6 +787,51 @@ class OptionsPage
     }
 
     /**
+     * Get all ReactField instances for a specific tab.
+     *
+     * @param string $tab_id Tab identifier.
+     * @return array<int, array> Array of React field configurations.
+     */
+    private function getReactFields(string $tab_id): array
+    {
+        $react_fields = [];
+        $sections = $this->getRenderableSectionIds($tab_id);
+
+        foreach ($sections as $section_id) {
+            if (!isset($this->sections[$section_id])) {
+                continue;
+            }
+
+            foreach ($this->sections[$section_id]->getFields() as $field) {
+                // Check if this is a ReactField instance and React is enabled
+                if ($field instanceof ReactField && $field->shouldUseReact()) {
+                    $react_fields[] = [
+                        'name' => $field->getName(),
+                        'type' => $field->getType(),
+                        'label' => $field->getLabel(),
+                        'component' => $field->getReactComponent(),
+                        'props' => $field->getReactProps(),
+                        'value' => $this->option_values[$field->getName()] ?? $field->getDefault(),
+                    ];
+                }
+            }
+        }
+
+        return $react_fields;
+    }
+
+    /**
+     * Check if the current tab has any React fields.
+     *
+     * @param string $tab_id Tab identifier.
+     * @return bool True if React fields are present.
+     */
+    private function hasReactFields(string $tab_id): bool
+    {
+        return !empty($this->getReactFields($tab_id));
+    }
+
+    /**
      * EnqueueAssets.
      *
      * @return void
@@ -809,5 +869,62 @@ class OptionsPage
             'optionName' => $this->option_name,
             'activeTab' => $this->getActiveTab(),
         ]);
+
+        // Enqueue React assets if we have React fields to render
+        if (!empty($this->reactFieldsToRender)) {
+            $this->enqueueReactAssets();
+        }
+    }
+
+    /**
+     * Enqueue React assets for rendering ReactField instances.
+     *
+     * @return void
+     */
+    private function enqueueReactAssets(): void
+    {
+        // Enqueue WordPress React dependencies
+        wp_enqueue_script('wp-element');
+        wp_enqueue_script('wp-components');
+        wp_enqueue_script('wp-block-editor');
+        wp_enqueue_script('wp-i18n');
+
+        // Enqueue React app for HyperFields
+        $react_app_path = defined('HYPERPRESS_PLUGIN_URL')
+            ? HYPERPRESS_PLUGIN_URL . 'assets/js/dist/react-fields.js'
+            : '';
+
+        if (empty($react_app_path)) {
+            return;
+        }
+
+        wp_enqueue_script(
+            'hyperfields-react-app',
+            $react_app_path,
+            ['wp-element', 'wp-components', 'wp-block-editor', 'wp-i18n'],
+            defined('HYPERPRESS_VERSION') ? HYPERPRESS_VERSION : '2.1.0',
+            true
+        );
+
+        // Localize data for React app
+        wp_localize_script('hyperfields-react-app', 'hyperfieldsReactData', [
+            'fields' => $this->reactFieldsToRender,
+            'optionName' => $this->option_name,
+            'values' => $this->option_values,
+            'strings' => [
+                'saveChanges' => __('Save Changes', 'hyperfields'),
+                'saving' => __('Saving...', 'hyperfields'),
+                'saved' => __('Saved', 'hyperfields'),
+                'error' => __('Error', 'hyperfields'),
+            ],
+        ]);
+
+        // Enqueue React-specific styles
+        wp_enqueue_style(
+            'hyperfields-react-styles',
+            defined('HYPERPRESS_PLUGIN_URL') ? HYPERPRESS_PLUGIN_URL . 'assets/css/react-fields.css' : '',
+            ['wp-components'],
+            defined('HYPERPRESS_VERSION') ? HYPERPRESS_VERSION : '2.1.0'
+        );
     }
 }
