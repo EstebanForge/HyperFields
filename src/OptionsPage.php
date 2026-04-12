@@ -792,7 +792,7 @@ class OptionsPage
      * @param string $tab_id Tab identifier.
      * @return array<int, array> Array of React field configurations.
      */
-    private function getReactFields(string $tab_id): array
+    public function getReactFields(string $tab_id): array
     {
         $react_fields = [];
         $sections = $this->getRenderableSectionIds($tab_id);
@@ -826,7 +826,7 @@ class OptionsPage
      * @param string $tab_id Tab identifier.
      * @return bool True if React fields are present.
      */
-    private function hasReactFields(string $tab_id): bool
+    public function hasReactFields(string $tab_id): bool
     {
         return !empty($this->getReactFields($tab_id));
     }
@@ -881,7 +881,7 @@ class OptionsPage
      *
      * @return void
      */
-    private function enqueueReactAssets(): void
+    public function enqueueReactAssets(): void
     {
         // Enqueue WordPress React dependencies
         wp_enqueue_script('wp-element');
