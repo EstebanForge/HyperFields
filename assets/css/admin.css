@@ -1,67 +1,141 @@
-/* HyperFields admin styles */
-.hyperpress-field-wrapper {
-    margin: 0 0 16px;
+/* ==========================================
+   HyperFields Admin Styles - Modern Refresh
+   WooCommerce-inspired design with cards,
+   better spacing, and contemporary UI
+   ========================================== */
+
+/* CSS Variables for theming */
+:root {
+    --hf-color-primary: #2271b1;
+    --hf-color-primary-hover: #135e96;
+    --hf-color-text: #1e1e1e;
+    --hf-color-text-secondary: #646970;
+    --hf-color-border: #e0e0e0;
+    --hf-color-border-light: #f0f0f0;
+    --hf-color-bg: #ffffff;
+    --hf-color-bg-secondary: #f6f7f7;
+    --hf-color-danger: #d63638;
+    --hf-color-success: #00a32a;
+    --hf-radius: 8px;
+    --hf-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    --hf-shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.1);
+    --hf-transition: 0.2s ease;
 }
 
-.hyperpress-field-label {
-    display: block;
-    font-weight: 600;
-    margin: 0 0 6px;
-}
-
-.hyperpress-field-input .description {
-    display: block;
-    color: #646970;
-    margin: 6px 0 0;
-}
-
-.hyperpress-field-input .regular-text,
-.hyperpress-field-input select,
-.hyperpress-field-input textarea {
-    max-width: 420px;
-    width: 100%;
-}
-
-.hyperpress-field-input textarea {
-    min-height: 120px;
-}
-
-.hyperpress-field-wrapper .required {
-    color: #d63638;
-    margin-left: 4px;
-}
-
-.hyperpress-map-field .hyperpress-map-canvas {
-    background: #f6f7f7;
-}
+/* ==========================================
+   Layout & Containers
+   ========================================== */
 
 .hyperpress-options-wrap {
-    max-width: 920px;
+    max-width: 1200px;
+    margin: 20px;
 }
 
 .hyperpress-options-wrap h1 {
-    margin-bottom: 18px;
+    margin: 0 0 24px;
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--hf-color-text);
+    letter-spacing: -0.5px;
 }
+
+/* ==========================================
+   Modern Tabs
+   ========================================== */
 
 .hyperpress-options-wrap .nav-tab-wrapper {
-    margin: 0 0 18px;
+    margin: 0 0 24px;
+    padding: 0;
+    border-bottom: 1px solid var(--hf-color-border);
 }
 
+.hyperpress-tabs-wrapper {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 24px;
+    border-bottom: 1px solid var(--hf-color-border);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.hyperpress-tab {
+    padding: 12px 20px;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--hf-color-text-secondary);
+    transition: all var(--hf-transition);
+    white-space: nowrap;
+    position: relative;
+}
+
+.hyperpress-tab:hover {
+    color: var(--hf-color-text);
+    background: var(--hf-color-bg-secondary);
+}
+
+.hyperpress-tab:focus {
+    outline: 2px solid var(--hf-color-primary);
+    outline-offset: -2px;
+}
+
+.hyperpress-tab.active {
+    color: var(--hf-color-primary);
+    border-bottom-color: var(--hf-color-primary);
+    font-weight: 600;
+}
+
+/* ==========================================
+   Card Layout
+   ========================================== */
+
+.hyperpress-card {
+    background: var(--hf-color-bg);
+    border-radius: var(--hf-radius);
+    box-shadow: var(--hf-shadow);
+    padding: 24px;
+    margin-bottom: 20px;
+    border: 1px solid var(--hf-color-border-light);
+}
+
+.hyperpress-card:last-child {
+    margin-bottom: 0;
+}
+
+.hyperpress-fields-group {
+    margin-top: 20px;
+}
+
+/* ==========================================
+   Section Headings
+   ========================================== */
+
 .hyperpress-options-wrap h2 {
-    margin: 22px 0 8px;
+    margin: 0 0 16px;
+    padding-bottom: 12px;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--hf-color-text);
+    border-bottom: 1px solid var(--hf-color-border-light);
 }
 
 .hyperpress-options-wrap p {
     margin: 0 0 12px;
+    color: var(--hf-color-text-secondary);
+    line-height: 1.6;
 }
 
-.hyperpress-fields-group {
-    margin-top: 16px;
-}
+/* ==========================================
+   Field Rows
+   ========================================== */
 
 .hyperpress-field-wrapper {
-    padding: 12px 0;
-    border-bottom: 1px solid #e5e7eb;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--hf-color-border-light);
+    transition: background-color var(--hf-transition);
 }
 
 .hyperpress-field-wrapper:last-child {
@@ -69,35 +143,418 @@
 }
 
 .hyperpress-field-row {
-    display: flex;
-    align-items: flex-start;
+    display: grid;
+    grid-template-columns: 220px 1fr;
     gap: 24px;
+    align-items: start;
 }
 
 .hyperpress-field-label {
-    min-width: 220px;
     font-weight: 600;
+    font-size: 14px;
+    color: var(--hf-color-text);
     padding-top: 4px;
+}
+
+.hyperpress-field-input-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
 .hyperpress-field-input-wrapper label {
     display: inline-flex;
     align-items: center;
     gap: 10px;
+    font-weight: 500;
+    font-size: 14px;
 }
 
-.hyperpress-field-input-wrapper input[type="checkbox"] {
-    margin-top: 0;
+.hyperpress-field-input-wrapper input[type="checkbox"],
+.hyperpress-field-input-wrapper input[type="radio"] {
+    margin: 0;
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
 }
 
 .hyperpress-field-input-wrapper .description {
     display: block;
     margin: 6px 0 0;
-    color: #50575e;
+    color: var(--hf-color-text-secondary);
+    font-size: 13px;
+    line-height: 1.5;
 }
 
+/* ==========================================
+   Input Styling
+   ========================================== */
+
+.hyperpress-field-input .regular-text,
+.hyperpress-field-input input[type="text"],
+.hyperpress-field-input input[type="url"],
+.hyperpress-field-input input[type="email"],
+.hyperpress-field-input input[type="number"],
+.hyperpress-field-input input[type="color"],
+.hyperpress-field-input select,
+.hyperpress-field-input textarea {
+    max-width: 420px;
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--hf-color-border);
+    border-radius: 4px;
+    font-size: 14px;
+    line-height: 1.5;
+    transition: border-color var(--hf-transition), box-shadow var(--hf-transition);
+}
+
+.hyperpress-field-input .regular-text:focus,
+.hyperpress-field-input input[type="text"]:focus,
+.hyperpress-field-input input[type="url"]:focus,
+.hyperpress-field-input input[type="email"]:focus,
+.hyperpress-field-input input[type="number"]:focus,
+.hyperpress-field-input select:focus,
+.hyperpress-field-input textarea:focus {
+    outline: none;
+    border-color: var(--hf-color-primary);
+    box-shadow: 0 0 0 3px rgba(34, 113, 177, 0.1);
+}
+
+.hyperpress-field-input textarea {
+    min-height: 120px;
+    resize: vertical;
+}
+
+.hyperpress-field-input select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23646970' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 36px;
+}
+
+/* ==========================================
+   Required Field Indicator
+   ========================================== */
+
+.hyperpress-field-wrapper .required {
+    color: var(--hf-color-danger);
+    margin-left: 4px;
+    font-weight: 600;
+}
+
+/* ==========================================
+   Submit Button
+   ========================================== */
+
 .hyperpress-options-wrap .submit {
-    margin-top: 18px;
+    margin-top: 24px;
+    padding: 20px 0;
+    border-top: 1px solid var(--hf-color-border-light);
+}
+
+.hyperpress-options-wrap .submit .button-primary {
+    padding: 12px 24px;
+    font-size: 14px;
+    font-weight: 600;
+    height: auto;
+    border-radius: 4px;
+    transition: background-color var(--hf-transition);
+}
+
+.hyperpress-options-wrap .submit .button-primary:hover {
+    background-color: var(--hf-color-primary-hover);
+}
+
+/* ==========================================
+   Map Field
+   ========================================== */
+
+.hyperpress-map-field .hyperpress-map-canvas {
+    background: var(--hf-color-bg-secondary);
+    border-radius: 4px;
+    border: 1px solid var(--hf-color-border);
+}
+
+/* ==========================================
+   Export Options Table
+   ========================================== */
+
+.hf-export-options {
+    margin-top: 16px;
+}
+
+.hf-export-options-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.hf-export-options-toolbar > div {
+    display: inline-flex;
+    gap: 8px;
+}
+
+.hf-export-options-table-wrap {
+    max-height: 480px;
+    overflow: auto;
+    border: 1px solid var(--hf-color-border);
+    border-radius: var(--hf-radius);
+    background: var(--hf-color-bg);
+}
+
+.hf-export-options-table {
+    margin: 0;
+    border: 0;
+}
+
+.hf-export-options-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--hf-color-bg-secondary);
+    padding: 12px;
+    text-align: left;
+    font-weight: 600;
+    border-bottom: 1px solid var(--hf-color-border);
+}
+
+.hf-export-options-table .hf-export-option-select-column {
+    width: 100px;
+    text-align: right;
+}
+
+.hf-export-options-table .hf-export-option-checkbox-cell {
+    text-align: right;
+    vertical-align: middle;
+}
+
+.hf-export-options-table .hf-export-option-checkbox-cell input[type="checkbox"] {
+    margin: 0;
+}
+
+.hf-export-options-filter {
+    margin-top: 10px;
+}
+
+.hf-export-options-filter-header {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 6px;
+}
+
+.hf-export-options-filter-header > label {
+    margin: 0;
+    font-weight: 600;
+}
+
+.hf-export-options-filter-header .description {
+    margin: 0;
+    font-weight: 400;
+}
+
+.hf-export-options-filter-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.hf-export-options-filter-controls input[type="search"] {
+    flex: 1 1 360px;
+    min-width: 0;
+    max-width: none;
+}
+
+/* ==========================================
+   Enhanced Multiselect Styles
+   ========================================== */
+
+.hf-multiselect-container {
+    position: relative;
+    border: 1px solid var(--hf-color-border);
+    padding: 10px;
+    background: var(--hf-color-bg);
+    border-radius: 4px;
+    max-width: 420px;
+}
+
+.hf-multiselect-search {
+    width: 100%;
+    padding: 8px 12px;
+    margin-bottom: 10px;
+    border: 1px solid var(--hf-color-border);
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.hf-multiselect-search:focus {
+    outline: none;
+    border-color: var(--hf-color-primary);
+    box-shadow: 0 0 0 3px rgba(34, 113, 177, 0.1);
+}
+
+.hf-multiselect-selected {
+    min-height: 32px;
+    padding: 5px;
+    margin-bottom: 10px;
+    background: var(--hf-color-bg-secondary);
+    border: 1px solid var(--hf-color-border);
+    border-radius: 4px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.hf-multiselect-placeholder {
+    color: var(--hf-color-text-secondary);
+    font-style: italic;
+    padding: 5px;
+}
+
+.hf-multiselect-tag {
+    display: inline-flex;
+    align-items: center;
+    background: var(--hf-color-primary);
+    color: #fff;
+    padding: 4px 8px;
+    border-radius: 3px;
+    font-size: 13px;
+    margin: 2px;
+}
+
+.hf-multiselect-remove {
+    margin-left: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 16px;
+    line-height: 1;
+    opacity: 0.8;
+}
+
+.hf-multiselect-remove:hover {
+    opacity: 1;
+}
+
+.hf-multiselect-options {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid var(--hf-color-border);
+    border-radius: 4px;
+    background: var(--hf-color-bg);
+    position: absolute;
+    width: calc(100% - 20px);
+    z-index: 1000;
+    box-shadow: var(--hf-shadow-lg);
+    display: none;
+}
+
+.hf-multiselect-option {
+    padding: 8px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--hf-color-border-light);
+    transition: background-color var(--hf-transition);
+}
+
+.hf-multiselect-option:last-child {
+    border-bottom: none;
+}
+
+.hf-multiselect-option:hover {
+    background-color: var(--hf-color-bg-secondary);
+}
+
+.hf-multiselect-option.selected {
+    background-color: #e8f4fc;
+    color: var(--hf-color-primary);
+    font-weight: 500;
+}
+
+.hf-multiselect-option.selected:hover {
+    background-color: #d8eefc;
+}
+
+.hf-multiselect-option.hf-multiselect-option-focused {
+    background-color: #cce5ff;
+    outline: 2px solid var(--hf-color-primary);
+    outline-offset: -2px;
+}
+
+/* Scrollbar styling for options list */
+.hf-multiselect-options::-webkit-scrollbar {
+    width: 8px;
+}
+
+.hf-multiselect-options::-webkit-scrollbar-track {
+    background: var(--hf-color-bg-secondary);
+    border-radius: 4px;
+}
+
+.hf-multiselect-options::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+.hf-multiselect-options::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* ==========================================
+   Responsive Design
+   ========================================== */
+
+@media (max-width: 782px) {
+    .hyperpress-options-wrap {
+        margin: 0;
+        padding: 16px;
+    }
+
+    .hyperpress-options-wrap h1 {
+        font-size: 24px;
+        margin-bottom: 20px;
+    }
+
+    .hyperpress-field-row {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .hyperpress-field-label {
+        padding-top: 0;
+    }
+
+    .hyperpress-tabs-wrapper {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+    }
+
+    .hf-export-options-filter-controls {
+        flex-wrap: wrap;
+    }
+
+    .hf-export-options-filter-header {
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+}
+
+/* ==========================================
+   Dark Mode Support (future-proofing)
+   ========================================== */
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --hf-color-text: #f0f0f1;
+        --hf-color-text-secondary: #a7aaad;
+        --hf-color-border: #3c434a;
+        --hf-color-border-light: #2c3338;
+        --hf-color-bg: #1d2327;
+        --hf-color-bg-secondary: #161b1e;
+    }
 }
 
 .hf-export-options {
