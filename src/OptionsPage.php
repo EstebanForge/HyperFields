@@ -388,7 +388,7 @@ class OptionsPage
             $this->reactFieldsToRender = $react_fields;
         }
         ?>
-        <div class="wrap hyperpress hyperpress-options-wrap">
+        <div class="wrap hyperpress hyperpress-options-wrap" id="hyperpress-options-page">
             <div class="hyperpress-layout__header" data-hyperpress-sticky-header>
                 <div class="hyperpress-layout__header-wrapper">
                     <h1 class="hyperpress-layout__header-heading"><?php echo esc_html($this->page_title); ?></h1>
@@ -897,6 +897,32 @@ class OptionsPage
             'optionName' => $this->option_name,
             'activeTab' => $this->getActiveTab(),
         ]);
+
+        // Hide notices before JS relocates them under the sticky header.
+        // Keep selector list centralized to avoid JS/PHP drift.
+        $notice_selectors = implode(', ', [
+            '#wpbody-content > .notice',
+            '#wpbody-content > .update-nag',
+            '#wpbody-content > .updated',
+            '#wpbody-content > .error',
+            '.wrap > .notice',
+            '.wrap > .update-nag',
+            '.wrap > .updated',
+            '.wrap > .error',
+            '.wrap.hyperpress-options-wrap > .notice',
+            '.wrap.hyperpress-options-wrap > .update-nag',
+            '.wrap.hyperpress-options-wrap > .updated',
+            '.wrap.hyperpress-options-wrap > .error',
+            '.wrap > .notice:first-child',
+            '.wrap > .update-nag:first-child',
+            '.wrap > .updated:first-child',
+            '.wrap > .error:first-child',
+        ]);
+
+        wp_add_inline_style('hyperpress-admin', sprintf(
+            '%s { opacity: 0 !important; }',
+            $notice_selectors
+        ));
 
         // Enqueue React assets if we have React fields to render
         if (!empty($this->reactFieldsToRender)) {
