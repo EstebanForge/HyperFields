@@ -4,26 +4,67 @@
    better spacing, and contemporary UI
    ========================================== */
 
+/*
+ * WordPress Admin CSS variable reference (core-exposed).
+ * Source of scheme overrides: wp-includes/css/dist/base-styles/admin-schemes.css
+ *
+ * Base defaults used across Gutenberg/admin package styles:
+ * --wp-block-synced-color: #7a00df;
+ * --wp-block-synced-color--rgb: 122, 0, 223;
+ * --wp-bound-block-color: var(--wp-block-synced-color);
+ * --wp-editor-canvas-background: #ddd;
+ * --wp-admin-theme-color: #007cba;
+ * --wp-admin-theme-color--rgb: 0, 124, 186;
+ * --wp-admin-theme-color-darker-10: rgb(0, 107, 160.5);
+ * --wp-admin-theme-color-darker-10--rgb: 0, 107, 160.5;
+ * --wp-admin-theme-color-darker-20: #005a87;
+ * --wp-admin-theme-color-darker-20--rgb: 0, 90, 135;
+ * --wp-admin-border-width-focus: 2px; (1.5px on high DPI)
+ *
+ * Admin color-scheme variables (via body.admin-color-*):
+ * light     -> --wp-admin-theme-color: #0085ba;
+ * modern    -> --wp-admin-theme-color: #3858e9;
+ * blue      -> --wp-admin-theme-color: #096484;
+ * coffee    -> --wp-admin-theme-color: #46403c;
+ * ectoplasm -> --wp-admin-theme-color: #523f6d;
+ * midnight  -> --wp-admin-theme-color: #e14d43;
+ * ocean     -> --wp-admin-theme-color: #627c83;
+ * sunrise   -> --wp-admin-theme-color: #dd823b;
+ *
+ * Common component-level accent var:
+ * --wp-components-color-accent (often used with fallback to --wp-admin-theme-color).
+ */
 /* CSS Variables for theming */
 :root {
-    --hf-color-primary: #2271b1;
-    --hf-color-primary-hover: #135e96;
-    --hf-color-primary-light: #e5f5ff;
-    --hf-color-primary-lighter: #f0f6fc;
-    --hf-color-primary-lightest: #cce5ff;
+    --hf-color-primary: var(--wp-admin-theme-color, #2271b1);
     --hf-color-text: #070707;
     --hf-color-text-secondary: #0f0f0f;
     --hf-color-border: #f0f0f0;
-    --hf-color-border-light: #f6f6f6;
+    --hf-color-border-light: #cccccc;
     --hf-color-bg: #ffffff;
     --hf-color-bg-secondary: #f6f7f7;
-    --hf-color-bg-input: #ffffff;
     --hf-color-danger: #d63638;
-    --hf-color-success: #00a32a;
+    --hf-color-white: #ffffff;
+    --hf-color-transparent: transparent;
+    --hf-color-admin-text: #1d2327;
+    --hf-color-admin-text-muted: #50575e;
+    --hf-color-admin-text-subtle: #646970;
+    --hf-color-admin-border: #dcdcde;
+    --hf-color-admin-border-strong: #8c8f94;
+    --hf-color-admin-border-soft: #c3c4c7;
+    --hf-color-admin-accent: var(--wp-components-color-accent, var(--wp-admin-theme-color, #3858e9));
+    --hf-color-admin-accent-hover: var(--wp-components-color-accent-darker-10, var(--wp-admin-theme-color-darker-10, #2145e6));
+    --hf-color-tag-bg: #fbfbfc;
+    --hf-color-danger-bg: #fef7f7;
+    --hf-color-scrollbar: #888888;
+    --hf-color-focus-inverse: #555555;
+    --hf-color-header-shadow: rgba(85, 93, 102, 0.3);
+    --hf-color-focus-ring: rgba(var(--wp-admin-theme-color--rgb, 34, 113, 177), 0.1);
+    --hf-color-dropdown-shadow: rgba(0, 0, 0, 0.12);
     --hf-radius: 8px;
     --hf-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-    --hf-shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.1);
     --hf-transition: 0.2s ease;
+    --hf-select-arrow-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23646970' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
 }
 
 /* ==========================================
@@ -57,7 +98,7 @@
     z-index: 30;
     margin: 0;
     padding: 0 0 1rem 0;
-    background: transparent;
+    background: var(--hf-color-transparent);
     transition: box-shadow var(--hf-transition);
 }
 
@@ -69,11 +110,11 @@
     right: calc(-1 * var(--hf-header-bleed-x));
     bottom: 0;
     left: calc(-1 * var(--hf-header-bleed-x));
-    background: #fff;
+    background: var(--hf-color-white);
 }
 
 .hyperpress-options-wrap .hyperpress-layout__header.is-scrolled {
-    box-shadow: 0 8px 16px 0 rgba(85, 93, 102, 0.3);
+    box-shadow: 0 8px 16px 0 var(--hf-color-header-shadow);
 }
 
 .hyperpress-options-wrap .hyperpress-layout__header-wrapper {
@@ -85,8 +126,8 @@
     z-index: 1;
     margin: 0 0 20px;
     padding: 0;
-    background: transparent;
-    border-bottom: 1px solid #dcdcde;
+    background: var(--hf-color-transparent);
+    border-bottom: 1px solid var(--hf-color-admin-border);
     display: flex;
     flex-wrap: wrap;
     gap: 0 28px;
@@ -101,7 +142,7 @@
     right: calc(-1 * var(--hf-header-bleed-x));
     bottom: 0;
     left: calc(-1 * var(--hf-header-bleed-x));
-    background: #fff;
+    background: var(--hf-color-white);
 }
 
 .hyperpress-options-wrap .hyperpress-nav-tab-wrapper .hyperpress-nav-tab.nav-tab {
@@ -109,9 +150,9 @@
     padding: 14px 0 15px;
     min-width: 50px;
     border: none;
-    border-bottom: 3px solid transparent;
-    background: transparent;
-    color: #50575e;
+    border-bottom: 3px solid var(--hf-color-transparent);
+    background: var(--hf-color-transparent);
+    color: var(--hf-color-admin-text-muted);
     font-size: 14px;
     line-height: 1.4;
     font-weight: 600;
@@ -120,8 +161,8 @@
 }
 
 .hyperpress-options-wrap .hyperpress-nav-tab-wrapper .hyperpress-nav-tab.nav-tab:hover {
-    color: #3858e9;
-    background: transparent;
+    color: var(--hf-color-admin-accent);
+    background: var(--hf-color-transparent);
 }
 
 .hyperpress-options-wrap .hyperpress-nav-tab-wrapper .hyperpress-nav-tab.nav-tab:focus {
@@ -130,9 +171,9 @@
 }
 
 .hyperpress-options-wrap .hyperpress-nav-tab-wrapper .hyperpress-nav-tab.nav-tab.nav-tab-active {
-    color: #1d2327;
-    border-bottom-color: #3858e9;
-    background: transparent;
+    color: var(--hf-color-admin-text);
+    border-bottom-color: var(--hf-color-admin-accent);
+    background: var(--hf-color-transparent);
 }
 
 .hyperpress-options-wrap .subsubsub.hyperpress-subsubsub {
@@ -141,7 +182,7 @@
     width: 100%;
     margin: 0 0 20px;
     padding: 0 0 12px;
-    border-bottom: 1px solid #dcdcde;
+    border-bottom: 1px solid var(--hf-color-admin-border);
 }
 
 .hyperpress-options-wrap .subsubsub.hyperpress-subsubsub li {
@@ -150,17 +191,17 @@
 }
 
 .hyperpress-options-wrap .subsubsub.hyperpress-subsubsub a {
-    color: #3858e9;
+    color: var(--hf-color-admin-accent);
     text-decoration: none;
 }
 
 .hyperpress-options-wrap .subsubsub.hyperpress-subsubsub a:hover {
-    color: #2145e6;
+    color: var(--hf-color-admin-accent-hover);
     text-decoration: underline;
 }
 
 .hyperpress-options-wrap .subsubsub.hyperpress-subsubsub a.current {
-    color: #1d2327;
+    color: var(--hf-color-admin-text);
     font-weight: 600;
     text-decoration: none;
 }
@@ -214,9 +255,9 @@
 
 .hyperpress-tab {
     padding: 12px 20px;
-    background: transparent;
+    background: var(--hf-color-transparent);
     border: none;
-    border-bottom: 2px solid transparent;
+    border-bottom: 2px solid var(--hf-color-transparent);
     cursor: pointer;
     font-size: 14px;
     font-weight: 500;
@@ -364,7 +405,7 @@
 .hyperpress-field-input textarea:focus {
     outline: none;
     border-color: var(--hf-color-primary);
-    box-shadow: 0 0 0 3px rgba(34, 113, 177, 0.1);
+    box-shadow: 0 0 0 3px var(--hf-color-focus-ring);
 }
 
 .hyperpress-field-input textarea {
@@ -375,7 +416,7 @@
 .hyperpress-field-input select {
     cursor: pointer;
     appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23646970' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+    background-image: var(--hf-select-arrow-icon);
     background-repeat: no-repeat;
     background-position: right 12px center;
     padding-right: 36px;
@@ -402,16 +443,11 @@
 }
 
 .hyperpress-options-wrap .submit .button-primary {
-    padding: 12px 24px;
-    font-size: 14px;
-    font-weight: 600;
-    height: auto;
-    border-radius: 4px;
     transition: background-color var(--hf-transition);
 }
 
 .hyperpress-options-wrap .submit .button-primary:hover {
-    background-color: var(--hf-color-primary-hover);
+
 }
 
 /* ==========================================
@@ -523,86 +559,103 @@
 
 .hf-multiselect-container {
     position: relative;
-    border: 1px solid var(--hf-color-border);
-    padding: 10px;
-    background: #ffffff;
+    border: 1px solid var(--hf-color-admin-border-strong);
+    padding: 8px;
+    background: var(--hf-color-white);
     border-radius: 4px;
+    max-width: 130ch;
+    box-sizing: border-box;
 }
 
 .hf-multiselect-search {
     width: 100%;
-    padding: 8px 12px;
-    margin-bottom: 10px;
-    border: 1px solid var(--hf-color-border);
-    border-radius: 4px;
+    min-height: 34px;
+    padding: 5px 9px;
+    margin-bottom: 8px;
+    border: 1px solid var(--hf-color-admin-border-strong);
+    border-radius: 3px;
     font-size: 14px;
+    line-height: 1.4;
+    box-sizing: border-box;
+    background: var(--hf-color-white);
+    color: var(--hf-color-admin-text);
 }
 
 .hf-multiselect-search:focus {
     outline: none;
     border-color: var(--hf-color-primary);
-    box-shadow: 0 0 0 3px rgba(34, 113, 177, 0.1);
+    box-shadow: 0 0 0 1px var(--hf-color-primary);
 }
 
 .hf-multiselect-selected {
     min-height: 32px;
-    padding: 5px;
-    margin-bottom: 10px;
-    border: 1px solid var(--hf-color-border);
-    border-radius: 4px;
+    padding: 4px;
+    margin-bottom: 8px;
+    border: 1px solid var(--hf-color-admin-border);
+    border-radius: 3px;
     display: flex;
     flex-wrap: wrap;
-    gap: 5px;
+    gap: 4px;
+    background: var(--hf-color-white);
 }
 
 .hf-multiselect-placeholder {
-    color: var(--hf-color-text-secondary);
-    font-style: italic;
+    color: var(--hf-color-admin-text-subtle);
     padding: 5px;
 }
 
 .hf-multiselect-tag {
     display: inline-flex;
     align-items: center;
-    background: var(--hf-color-primary-light);
-    color: var(--hf-color-primary);
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 13px;
-    margin: 2px;
+    gap: 4px;
+    background: var(--hf-color-tag-bg);
+    color: var(--hf-color-admin-text);
+    border: 1px solid var(--hf-color-admin-border-soft);
+    padding: 2px 7px;
+    border-radius: 2px;
+    font-size: 12px;
+    line-height: 1.5;
 }
 
 .hf-multiselect-remove {
-    margin-left: 6px;
     cursor: pointer;
-    font-weight: bold;
-    font-size: 16px;
+    font-weight: 700;
+    font-size: 13px;
     line-height: 1;
-    opacity: 0.8;
+    color: var(--hf-color-admin-text-subtle);
+    border-radius: 2px;
+    padding: 1px 2px;
 }
 
 .hf-multiselect-remove:hover {
-    opacity: 1;
+    color: var(--hf-color-danger);
+    background: var(--hf-color-danger-bg);
 }
 
 .hf-multiselect-options {
     max-height: 200px;
     overflow-y: auto;
-    border: 1px solid var(--hf-color-border);
-    border-radius: 4px;
-    background: #ffffff;
+    border: 1px solid var(--hf-color-admin-border-strong);
+    border-radius: 3px;
+    background: var(--hf-color-white);
     position: absolute;
-    width: calc(100% - 20px);
+    top: 100%;
+    left: 8px;
+    width: calc(100% - 16px);
+    margin-top: 2px;
     z-index: 1000;
-    box-shadow: var(--hf-shadow-lg);
+    box-shadow: 0 1px 3px var(--hf-color-dropdown-shadow);
     display: none;
 }
 
 .hf-multiselect-option {
-    padding: 8px 12px;
+    padding: 7px 10px;
     cursor: pointer;
-    border-bottom: 1px solid var(--hf-color-border-light);
-    transition: background-color var(--hf-transition);
+    border-bottom: 1px solid var(--hf-color-admin-border);
+    transition: background-color var(--hf-transition), color var(--hf-transition);
+    color: var(--hf-color-admin-text);
+    font-size: 13px;
+    line-height: 1.4;
 }
 
 .hf-multiselect-option:last-child {
@@ -610,23 +663,37 @@
 }
 
 .hf-multiselect-option:hover {
-    background-color: var(--hf-color-primary-lighter);
+    background-color: var(--hf-color-bg-secondary);
 }
 
 .hf-multiselect-option.selected {
-    background-color: var(--hf-color-primary-light);
-    color: var(--hf-color-primary);
+    background-color: var(--hf-color-white);
+    color: var(--hf-color-admin-text);
     font-weight: 500;
+    position: relative;
+    padding-right: 28px;
+}
+
+.hf-multiselect-option.selected::after {
+    content: "✓";
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--hf-color-admin-accent);
+    font-size: 12px;
+    font-weight: 700;
 }
 
 .hf-multiselect-option.selected:hover {
-    background-color: #d8eefc;
+    background-color: var(--hf-color-bg-secondary);
 }
 
 .hf-multiselect-option.hf-multiselect-option-focused {
-    background-color: var(--hf-color-primary-lightest);
-    outline: 2px solid var(--hf-color-primary);
-    outline-offset: -2px;
+    background-color: var(--hf-color-focus-inverse);
+    color: var(--hf-color-white);
+    box-shadow: inset 0 0 0 1px var(--hf-color-admin-border-soft);
+    outline: none;
 }
 
 /* Scrollbar styling for options list */
@@ -640,12 +707,12 @@
 }
 
 .hf-multiselect-options::-webkit-scrollbar-thumb {
-    background: #888;
+    background: var(--hf-color-scrollbar);
     border-radius: 4px;
 }
 
 .hf-multiselect-options::-webkit-scrollbar-thumb:hover {
-    background: #555;
+    background: var(--hf-color-focus-inverse);
 }
 
 /* ==========================================
@@ -720,9 +787,8 @@
         --hf-color-text: #f0f0f1;
         --hf-color-text-secondary: #787878;
         --hf-color-border: #3c434a;
-        --hf-color-border-light: #c4c9c9;
+        --hf-color-border-light: #cccccc;
         --hf-color-bg: #1d2327;
         --hf-color-bg-secondary: #161b1e;
     }
 }
-    background: #fff;

@@ -440,7 +440,10 @@ class OptionsPage
         }
         submit_button(
             esc_html__('Save Changes', 'api-for-htmx'),
-            'primary'
+            'primary',
+            'submit',
+            true,
+            ['class' => 'button button-primary']
         );
         echo '</form>';
 
