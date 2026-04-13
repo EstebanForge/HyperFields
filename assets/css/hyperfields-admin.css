@@ -177,6 +177,32 @@
     margin-top: 0;
 }
 
+/* Notice relocate/enter transition */
+.hyperpress-options-wrap .notice.hf-notice-relocating,
+.hyperpress-options-wrap .update-nag.hf-notice-relocating,
+.hyperpress-options-wrap .updated.hf-notice-relocating,
+.hyperpress-options-wrap .error.hf-notice-relocating {
+    transition: opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+        transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: opacity, transform;
+}
+
+.hyperpress-options-wrap .notice.hf-notice-relocating.hf-notice-pending,
+.hyperpress-options-wrap .update-nag.hf-notice-relocating.hf-notice-pending,
+.hyperpress-options-wrap .updated.hf-notice-relocating.hf-notice-pending,
+.hyperpress-options-wrap .error.hf-notice-relocating.hf-notice-pending {
+    opacity: 0;
+    transform: translateY(-8px);
+}
+
+.hyperpress-options-wrap .notice.hf-notice-relocating.hf-notice-enter,
+.hyperpress-options-wrap .update-nag.hf-notice-relocating.hf-notice-enter,
+.hyperpress-options-wrap .updated.hf-notice-relocating.hf-notice-enter,
+.hyperpress-options-wrap .error.hf-notice-relocating.hf-notice-enter {
+    opacity: 1;
+    transform: translateY(0);
+}
+
 .hyperpress-tabs-wrapper {
     display: flex;
     gap: 4px;

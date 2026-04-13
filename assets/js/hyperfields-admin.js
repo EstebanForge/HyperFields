@@ -1,6 +1,33 @@
 (function () {
     'use strict';
 
+    var HF_NOTICE_SELECTORS = [
+        '#wpbody-content > .notice',
+        '#wpbody-content > .update-nag',
+        '#wpbody-content > .updated',
+        '#wpbody-content > .error',
+        '.wrap > .notice',
+        '.wrap > .update-nag',
+        '.wrap > .updated',
+        '.wrap > .error',
+        '.wrap.hyperpress-options-wrap > .notice',
+        '.wrap.hyperpress-options-wrap > .update-nag',
+        '.wrap.hyperpress-options-wrap > .updated',
+        '.wrap.hyperpress-options-wrap > .error'
+    ].join(', ');
+
+    var HF_NOTICE_STATE = {
+        relocating: 'hf-notice-relocating',
+        pending: 'hf-notice-pending',
+        enter: 'hf-notice-enter'
+    };
+
+    function runAfterTwoFrames(callback) {
+        window.requestAnimationFrame(function () {
+            window.requestAnimationFrame(callback);
+        });
+    }
+
     function normalizeText(value) {
         return String(value || '').toLowerCase().trim();
     }
@@ -459,6 +486,37 @@
         window.addEventListener('resize', scheduleUpdate, { passive: true });
     }
 
+    function relocateAdminNotices() {
+        var noticeCatcher = document.getElementById('hyperpress-layout__notice-catcher');
+        if (!noticeCatcher || !noticeCatcher.parentNode) {
+            return;
+        }
+
+        var notices = Array.prototype.slice.call(document.querySelectorAll(HF_NOTICE_SELECTORS));
+
+        notices.forEach(function (notice) {
+            if (notice.dataset.hfNoticeRelocated === '1') {
+                return;
+            }
+
+            notice.dataset.hfNoticeRelocated = '1';
+            notice.classList.remove(HF_NOTICE_STATE.relocating, HF_NOTICE_STATE.pending, HF_NOTICE_STATE.enter);
+            notice.classList.add(HF_NOTICE_STATE.relocating, HF_NOTICE_STATE.pending);
+            noticeCatcher.parentNode.insertBefore(notice, noticeCatcher);
+
+            // Let layout settle after DOM move, then transition from pending -> enter once.
+            runAfterTwoFrames(function () {
+                if (notice.dataset.hfNoticeAnimated === '1') {
+                    return;
+                }
+                notice.dataset.hfNoticeAnimated = '1';
+                void notice.offsetWidth;
+                notice.classList.add(HF_NOTICE_STATE.enter);
+                notice.classList.remove(HF_NOTICE_STATE.pending);
+            });
+        });
+    }
+
 
     document.addEventListener('click', function (event) {
         var button = event.target.closest('[data-hf-export-toggle]');
@@ -575,6 +633,8 @@
         initStickyHeader();
         initJsonCopyButtons();
         initExportModeControls();
+
+        relocateAdminNotices();
 
         var importConfirm = document.getElementById('hf_import_confirm_destructive');
         var confirmBtn    = document.getElementById('hf_confirm_submit_btn');
