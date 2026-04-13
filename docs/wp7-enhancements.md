@@ -5,7 +5,7 @@
 All 5 phases have been successfully implemented:
 
 ### Phase 1: CSS Refresh ✅
-- **File**: `assets/css/admin.css`
+- **File**: `assets/css/hyperfields-admin.css`
 - Modern WooCommerce-inspired design with CSS variables
 - Card layout, improved spacing, better typography
 - Responsive design & dark mode support
@@ -188,7 +188,7 @@ HyperFields/
 │   └── Field.php                # Base field class
 ├── assets/
 │   ├── css/
-│   │   ├── admin.css            # Modern styles (updated)
+│   │   ├── hyperfields-admin.css            # Modern styles (updated)
 │   │   └── react-fields.css     # React-specific styles (new)
 │   └── js/
 │       ├── src/
@@ -256,7 +256,7 @@ npm run build
 
 ### Styling issues?
 - Clear browser cache
-- Check both admin.css and react-fields.css are enqueued
+- Check both hyperfields-admin.css and react-fields.css are enqueued
 - Verify CSS variables are defined
 
 ---

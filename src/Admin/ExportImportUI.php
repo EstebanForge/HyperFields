@@ -163,7 +163,7 @@ class ExportImportUI
         if ($pluginUrl !== '') {
             wp_enqueue_script(
                 'hyperpress-admin-options',
-                $pluginUrl . 'assets/js/admin-options.js',
+                $pluginUrl . 'assets/js/hyperfields-admin.js',
                 [],
                 $version,
                 false

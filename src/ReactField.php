@@ -225,6 +225,7 @@ class ReactField extends Field
     public function getRequired(): bool
     {
         $data = parent::toArray();
+
         return $data['required'] ?? false;
     }
 
@@ -236,6 +237,7 @@ class ReactField extends Field
     public function getMultiple(): bool
     {
         $data = parent::toArray();
+
         return $data['multiple'] ?? false;
     }
 
@@ -247,6 +249,7 @@ class ReactField extends Field
     public function getMin(): ?int
     {
         $data = parent::toArray();
+
         return $data['min'] ?? null;
     }
 
@@ -258,6 +261,7 @@ class ReactField extends Field
     public function getMax(): ?int
     {
         $data = parent::toArray();
+
         return $data['max'] ?? null;
     }
 
@@ -269,6 +273,7 @@ class ReactField extends Field
     public function getLayout(): string
     {
         $data = parent::toArray();
+
         return $data['layout'] ?? 'grid';
     }
 
@@ -332,6 +337,7 @@ class ReactField extends Field
                 if (method_exists($this, $method)) {
                     return $this->$method();
                 }
+
                 return null;
         }
     }
