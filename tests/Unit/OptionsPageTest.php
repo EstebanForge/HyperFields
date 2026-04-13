@@ -755,7 +755,7 @@ class OptionsPageTest extends \PHPUnit\Framework\TestCase
         // Get React fields from section2
         $reactFields2 = $this->page->getReactFields('section2');
         $this->assertCount(2, $reactFields2);
-        $fieldNames = array_map(fn($f) => $f['name'], $reactFields2);
+        $fieldNames = array_map(fn ($f) => $f['name'], $reactFields2);
         $this->assertContains('react2', $fieldNames);
         $this->assertContains('react3', $fieldNames);
     }
@@ -778,6 +778,8 @@ class OptionsPageTest extends \PHPUnit\Framework\TestCase
         $this->assertTrue($this->page->hasReactFields('test_section'));
     }
 
+    #[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+    #[\PHPUnit\Framework\Attributes\PreserveGlobalState(false)]
     public function testEnqueueReactAssetsCanBeCalled()
     {
         $section = OptionsSection::make('test_section', 'Test Section');
@@ -800,6 +802,8 @@ class OptionsPageTest extends \PHPUnit\Framework\TestCase
         $this->page->enqueueReactAssets();
     }
 
+    #[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+    #[\PHPUnit\Framework\Attributes\PreserveGlobalState(false)]
     public function testEnqueueReactAssetsWithoutReactFields()
     {
         $section = OptionsSection::make('test_section', 'Test Section');

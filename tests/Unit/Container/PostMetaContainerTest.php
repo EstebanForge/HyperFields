@@ -215,6 +215,8 @@ class PostMetaContainerTest extends \PHPUnit\Framework\TestCase
         $this->container->attach();
     }
 
+    #[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+    #[\PHPUnit\Framework\Attributes\PreserveGlobalState(false)]
     public function testIsValidSaveWithAutosave()
     {
         define('DOING_AUTOSAVE', true);

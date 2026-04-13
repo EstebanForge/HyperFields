@@ -416,6 +416,50 @@
         updateGateState();
     }
 
+    function initStickyHeader() {
+        var header = document.querySelector('[data-hyperpress-sticky-header]') ||
+            document.querySelector('.hyperpress-options-wrap .hyperpress-layout__header');
+        if (!header) {
+            return;
+        }
+        var isTicking = false;
+
+        function getScrollTop() {
+            return window.pageYOffset ||
+                document.documentElement.scrollTop ||
+                document.body.scrollTop ||
+                0;
+        }
+
+        function updateHeaderShadow() {
+            var scrollTop = getScrollTop();
+            var isScrolled = scrollTop > 4;
+            if (isScrolled) {
+                header.classList.add('is-scrolled');
+            } else {
+                header.classList.remove('is-scrolled');
+            }
+        }
+
+        function scheduleUpdate(event) {
+            if (isTicking) {
+                return;
+            }
+            isTicking = true;
+            window.requestAnimationFrame(function () {
+                isTicking = false;
+                updateHeaderShadow();
+            });
+        }
+
+        updateHeaderShadow();
+        window.addEventListener('scroll', scheduleUpdate, { passive: true });
+        // Capture scroll from nested scroll containers too (WP admin layouts/plugins).
+        document.addEventListener('scroll', scheduleUpdate, { passive: true, capture: true });
+        window.addEventListener('resize', scheduleUpdate, { passive: true });
+    }
+
+
     document.addEventListener('click', function (event) {
         var button = event.target.closest('[data-hf-export-toggle]');
         if (!button) {
@@ -528,6 +572,7 @@
     // -------------------------------------------------------------------------
 
     document.addEventListener('DOMContentLoaded', function () {
+        initStickyHeader();
         initJsonCopyButtons();
         initExportModeControls();
 

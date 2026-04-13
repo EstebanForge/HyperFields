@@ -161,7 +161,7 @@ npm run build
 ```
 
 ### Styling issues
-- Ensure both admin.css and react-fields.css are enqueued
+- Ensure both hyperfields-admin.css and react-fields.css are enqueued
 - Check for CSS conflicts with theme/plugins
 - Verify CSS variables are defined
 

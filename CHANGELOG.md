@@ -79,7 +79,7 @@
   - Synchronizes fallback versions across all files
 
 ### Changed
-- **CSS Refresh** - Modernized `assets/css/admin.css` with:
+- **CSS Refresh** - Modernized `assets/css/hyperfields-admin.css` with:
   - CSS variable-based theming system
   - Card layout replacing dated field styling
   - Better spacing, typography, and visual hierarchy
@@ -155,7 +155,7 @@
 - Documentation refreshed for transfer logging, Transfer Manager schema configuration, and `ExportImportUI` extension points.
 - `ExportImport` updated to align with transfer-manager, typed-node, and schema-aware flows.
 - `ExportImportUI` overhauled with richer export selection/filter UX and improved diff/import experience.
-- Export options filter layout and admin styling/scripts refactored (`assets/js/admin-options.js`, `assets/css/admin.css`).
+- Export options filter layout and admin styling/scripts refactored (`assets/js/hyperfields-admin.js`, `assets/css/hyperfields-admin.css`).
 - Core docs updated with content transfer and extensible manager guidance.
 - Composer/library metadata and README refreshed for library-first usage.
 - Packaging cleanup for library distribution:
