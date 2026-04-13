@@ -8,10 +8,10 @@
 :root {
     --hf-color-primary: #2271b1;
     --hf-color-primary-hover: #135e96;
-    --hf-color-text: #1e1e1e;
-    --hf-color-text-secondary: #646970;
+    --hf-color-text: #50575e;
+    --hf-color-text-secondary: #0f0f0f;
     --hf-color-border: #e0e0e0;
-    --hf-color-border-light: #f0f0f0;
+    --hf-color-border-light: #f6f6f6;
     --hf-color-bg: #ffffff;
     --hf-color-bg-secondary: #f6f7f7;
     --hf-color-danger: #d63638;
@@ -134,12 +134,7 @@
 
 .hyperpress-field-wrapper {
     padding: 16px 0;
-    border-bottom: 1px solid var(--hf-color-border-light);
     transition: background-color var(--hf-transition);
-}
-
-.hyperpress-field-wrapper:last-child {
-    border-bottom: 0;
 }
 
 .hyperpress-field-row {
@@ -152,7 +147,6 @@
 .hyperpress-field-label {
     font-weight: 600;
     font-size: 14px;
-    color: var(--hf-color-text);
     padding-top: 4px;
 }
 
@@ -198,7 +192,6 @@
 .hyperpress-field-input input[type="color"],
 .hyperpress-field-input select,
 .hyperpress-field-input textarea {
-    max-width: 420px;
     width: 100%;
     padding: 10px 12px;
     border: 1px solid var(--hf-color-border);
@@ -380,7 +373,6 @@
     padding: 10px;
     background: var(--hf-color-bg);
     border-radius: 4px;
-    max-width: 420px;
 }
 
 .hf-multiselect-search {
@@ -549,9 +541,9 @@
 @media (prefers-color-scheme: dark) {
     :root {
         --hf-color-text: #f0f0f1;
-        --hf-color-text-secondary: #a7aaad;
+        --hf-color-text-secondary: #787878;
         --hf-color-border: #3c434a;
-        --hf-color-border-light: #2c3338;
+        --hf-color-border-light: #c4c9c9;
         --hf-color-bg: #1d2327;
         --hf-color-bg-secondary: #161b1e;
     }
