@@ -23,7 +23,7 @@ composer update --no-dev --optimize-autoloader   # Production update
 
 ### Version Management
 - Update version in `composer.json`
-- Update version in `bootstrap.php` fallback values (3 locations)
+- Update `HYPERFIELDS_DEFAULT_VERSION` in `bootstrap.php` (single source for PHP fallback/default)
 - Update `CHANGELOG.md` with changes
 
 ## Architecture & Key Components
