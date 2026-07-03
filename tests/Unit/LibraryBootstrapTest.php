@@ -62,9 +62,17 @@ class LibraryBootstrapTest extends TestCase
 
     public function testLibraryBootstrapDefinesConstants(): void
     {
-        // Skip if constants are already defined by main bootstrap process.
-        // This happens when @runInSeparateProcess doesn't fully isolate.
-        if (defined('HYPERFIELDS_INSTANCE_LOADED')) {
+        // Skip if constants are already defined by main bootstrap process or
+        // by sibling tests in the same suite. @runInSeparateProcess does not
+        // fully isolate constants on all PHP/PHPUnit combos (the HYPERPRESS_*
+        // constants are defined in-process by AdminPageTest/OptionsPageTest
+        // enqueue tests), and this test asserts the bootstrap sets them fresh.
+        if (
+            defined('HYPERFIELDS_INSTANCE_LOADED')
+            || defined('HYPERFIELDS_PLUGIN_URL')
+            || defined('HYPERPRESS_PLUGIN_URL')
+            || defined('HYPERPRESS_VERSION')
+        ) {
             $this->markTestSkipped('HyperFields already initialized; cannot test LibraryBootstrap in isolation.');
         }
 
