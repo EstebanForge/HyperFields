@@ -9,6 +9,7 @@ use Brain\Monkey\Functions;
 use HyperFields\Field;
 use HyperFields\OptionsPage;
 use HyperFields\OptionsSection;
+use Mockery;
 use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
 
 class OptionsPageTest extends \PHPUnit\Framework\TestCase
@@ -39,6 +40,8 @@ class OptionsPageTest extends \PHPUnit\Framework\TestCase
         Functions\when('wp_hash')->justReturn('hash123');
         Functions\when('settings_fields')->justReturn('');
         Functions\when('do_settings_fields')->justReturn('');
+
+        // Mock submit_button to echo output using alias
 
         // Mock submit_button to echo output using alias
         Functions\when('submit_button')->alias(function ($text, $type) {
@@ -329,6 +332,10 @@ class OptionsPageTest extends \PHPUnit\Framework\TestCase
             ->once()
             ->with('test_field', '', [$field, 'render'], 'hyperpress_options', 'test_section', $field->getArgs());
 
+        Functions\expect('add_action')
+            ->once()
+            ->with('update_option_hyperpress_options', [$this->page, 'onOptionSaved'], 10, 3);
+
         $this->page->registerSettings();
     }
 
@@ -349,6 +356,86 @@ class OptionsPageTest extends \PHPUnit\Framework\TestCase
         $this->assertEquals('sanitized text', $result['text_field']);
         $this->assertArrayHasKey('checkbox_field', $result);
         $this->assertEquals('0', $result['checkbox_field']); // Unchecked checkbox
+    }
+
+    public function testSanitizeOptionsAppliesPreSaveFilter()
+    {
+        $section = $this->page->addSection('test_section', 'Test Section');
+        $section->addField(Field::make('text', 'text_field', 'Text Field'));
+
+        $_POST['hyperpress_active_tab'] = 'test_section';
+        $input = ['text_field' => 'original'];
+
+        // Capture every apply_filters call so we can assert (a) the pre_save
+        // seam fires during sanitize and (b) it receives the sanitized output.
+        // Brain Monkey's Functions\expect replaces apply_filters wholesale,
+        // so we route all calls through one recorder and return the value
+        // passed in (default pass-through) for non-matching tags.
+        $invocations = [];
+        Functions\when('apply_filters')->alias(function ($tag, $value) use (&$invocations) {
+            $args = array_slice(func_get_args(), 1);
+            $invocations[] = ['tag' => $tag, 'args' => $args];
+
+            // Pre_save seam: mutate to prove the production code returns the
+            // filtered value, not the pre-filter one.
+            if ($tag === 'hyperfields/options_page/pre_save' && is_array($value)) {
+                $value['filter_ran'] = true;
+            }
+
+            return $value;
+        });
+
+        $result = $this->page->sanitizeOptions($input);
+
+        $preSaveCalls = array_filter($invocations, fn ($i) => $i['tag'] === 'hyperfields/options_page/pre_save');
+        $this->assertCount(1, $preSaveCalls, 'pre_save filter seam must fire exactly once during sanitize');
+
+        $captured = reset($preSaveCalls);
+        $this->assertArrayHasKey('text_field', $captured['args'][0], 'filter must receive the sanitized field values');
+
+        $this->assertArrayHasKey('filter_ran', $result, 'production code must use the filter return value');
+        $this->assertTrue($result['filter_ran']);
+    }
+
+    public function testOnOptionSavedFiresAfterSaveAction()
+    {
+        $old = ['text_field' => 'old'];
+        $new = ['text_field' => 'new'];
+
+        // Capture every do_action call to assert the semantic after_save action
+        // fires with the post-write payload: ($new, $old, $page). Consumers
+        // that hook here receive exactly these args.
+        $invocations = [];
+        Functions\when('do_action')->alias(function ($tag, ...$args) use (&$invocations) {
+            $invocations[] = ['tag' => $tag, 'args' => $args];
+        });
+
+        $this->page->onOptionSaved($old, $new, 'hyperpress_options');
+
+        $afterSaveCalls = array_filter($invocations, fn ($i) => $i['tag'] === 'hyperfields/options_page/after_save');
+        $this->assertCount(1, $afterSaveCalls, 'after_save action must fire exactly once');
+
+        $captured = reset($afterSaveCalls);
+        $this->assertSame($new, $captured['args'][0]);
+        $this->assertSame($old, $captured['args'][1]);
+        $this->assertSame($this->page, $captured['args'][2]);
+    }
+
+    public function testOnOptionSavedSkipsNoOpWrite()
+    {
+        // Identical old/new means nothing changed. after_save must NOT fire,
+        // so consumers' cache invalidation / webhooks run once per real change.
+        $value = ['text_field' => 'same'];
+
+        $invocations = [];
+        Functions\when('do_action')->alias(function ($tag, ...$args) use (&$invocations) {
+            $invocations[] = ['tag' => $tag, 'args' => $args];
+        });
+
+        $this->page->onOptionSaved($value, $value, 'hyperpress_options');
+
+        $afterSaveCalls = array_filter($invocations, fn ($i) => $i['tag'] === 'hyperfields/options_page/after_save');
+        $this->assertCount(0, $afterSaveCalls, 'after_save must not fire on a no-op write');
     }
 
     public function testSanitizeOptionsNonCheckboxNotPresent()
@@ -380,6 +467,12 @@ class OptionsPageTest extends \PHPUnit\Framework\TestCase
         if (!defined('HYPERPRESS_COMPACT_INPUT')) {
             define('HYPERPRESS_COMPACT_INPUT', true);
         }
+
+        // The pre_save filter seam (added with the save-hook feature) fires
+        // unconditionally at the end of sanitizeOptions. In a separate process
+        // we cannot pollute other suites by stubbing apply_filters in setUp,
+        // so stub it here locally to mirror real WP pass-through behavior.
+        Functions\when('apply_filters')->returnArg(2);
 
         $_POST['hyperpress_compact_input'] = '{"hyperpress_options": "not_an_array"}'; // Invalid format
         $_POST['hyperpress_active_tab'] = 'test_section';

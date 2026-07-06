@@ -8,11 +8,14 @@ use Brain\Monkey;
 use Brain\Monkey\Functions;
 use HyperFields\LibraryBootstrap;
 use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
+use PHPUnit\Framework\Attributes\PreserveGlobalState;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 
 /**
- * @runInSeparateProcess
- * @preserveGlobalState disabled
+ * LibraryBootstrap tests must run in a child process: the bootstrap asserts
+ * that init() defines the HYPERFIELDS and HYPERPRESS constants fresh, which is
+ * impossible once any other test or the plugin bootstrap has defined them.
  */
 class LibraryBootstrapTest extends TestCase
 {
@@ -60,20 +63,22 @@ class LibraryBootstrapTest extends TestCase
         parent::tearDown();
     }
 
+    #[RunInSeparateProcess]
+    #[PreserveGlobalState(false)]
     public function testLibraryBootstrapDefinesConstants(): void
     {
-        // Skip if constants are already defined by main bootstrap process or
-        // by sibling tests in the same suite. @runInSeparateProcess does not
-        // fully isolate constants on all PHP/PHPUnit combos (the HYPERPRESS_*
-        // constants are defined in-process by AdminPageTest/OptionsPageTest
-        // enqueue tests), and this test asserts the bootstrap sets them fresh.
+        // In a truly isolated child process the plugin bootstrap has not run,
+        // so the HYPERFIELDS and HYPERPRESS constants should be undefined here.
+        // If a future change causes the bootstrap to pre-define them (e.g. an
+        // autoloaded file firing init()), surface it loudly instead of skipping.
         if (
             defined('HYPERFIELDS_INSTANCE_LOADED')
             || defined('HYPERFIELDS_PLUGIN_URL')
             || defined('HYPERPRESS_PLUGIN_URL')
             || defined('HYPERPRESS_VERSION')
         ) {
-            $this->markTestSkipped('HyperFields already initialized; cannot test LibraryBootstrap in isolation.');
+            $this->fail('HYPERFIELDS or HYPERPRESS constants already defined in isolated process; ' .
+                'LibraryBootstrap::init() cannot be tested fresh. Check the autoload chain.');
         }
 
         $plugin_file = '/var/www/wp-content/plugins/host-plugin/host-plugin.php';
