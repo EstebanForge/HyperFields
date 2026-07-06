@@ -272,6 +272,59 @@ class FieldTest extends \PHPUnit\Framework\TestCase
         $this->assertEquals('filtered', $field->sanitizeValue('val'));
     }
 
+    public function testNumberRangeClampAndAttributes()
+    {
+        // No bounds set: behaves like before (cast to float).
+        $field = Field::make('number', 'n', 'N');
+        $this->assertEquals(123.45, $field->sanitizeValue('123.45'));
+        $this->assertEquals(0.0, $field->sanitizeValue('abc'));
+
+        // setMin/setMax clamp on sanitize (never reject).
+        $field = Field::make('number', 'n', 'N')->setMin(1.0)->setMax(7.0);
+        $this->assertEquals(1.0, $field->sanitizeValue(-5));   // below min -> clamped
+        $this->assertEquals(7.0, $field->sanitizeValue(99));   // above max -> clamped
+        $this->assertEquals(4.0, $field->sanitizeValue(4));    // in range -> untouched
+        $this->assertEquals(1.0, $field->sanitizeValue('abc')); // non-numeric -> 0 -> clamped to min
+
+        // Getters return floats.
+        $this->assertSame(1.0, $field->getMin());
+        $this->assertSame(7.0, $field->getMax());
+
+        // Step is optional and independent.
+        $field->setStep(0.5);
+        $this->assertSame(0.5, $field->getStep());
+
+        // toArray injects min/max/step as HTML attributes for number fields.
+        $data = $field->toArray();
+        $this->assertSame(['min' => 1.0, 'max' => 7.0, 'step' => 0.5], $data['args']['attributes']);
+
+        // Explicit user-supplied attributes win over the derived ones.
+        $field = Field::make('number', 'n', 'N')->setMin(1.0)->setMax(7.0)->addArg('attributes', ['min' => 0]);
+        $data = $field->toArray();
+        $this->assertSame(0, $data['args']['attributes']['min']);
+        $this->assertSame(7.0, $data['args']['attributes']['max']);
+
+        // Non-number fields are unaffected: no attribute injection.
+        $text = Field::make('text', 't', 'T')->setMin(1.0)->setMax(7.0);
+        $this->assertArrayNotHasKey('attributes', $text->toArray()['args']);
+    }
+
+    public function testValidationRulesAreTypeAware()
+    {
+        // Number field: min/max are numeric bounds.
+        $field = Field::make('number', 'n', 'N')->setValidation(['min' => 1, 'max' => 7]);
+        $this->assertTrue($field->validateValue(4));
+        $this->assertFalse($field->validateValue(0));
+        $this->assertFalse($field->validateValue(8));
+        $this->assertFalse($field->validateValue('abc'));
+
+        // Text field: min/max stay string-length bounds (backward compatible).
+        $field = Field::make('text', 't', 'T')->setValidation(['min' => 2, 'max' => 5]);
+        $this->assertTrue($field->validateValue('abc'));
+        $this->assertFalse($field->validateValue('a'));
+        $this->assertFalse($field->validateValue('abcdef'));
+    }
+
     public function testArgsAndOptionValue()
     {
         $field = Field::make('text', 'f', 'F')->setDefault('def');
