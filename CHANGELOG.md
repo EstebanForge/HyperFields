@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.3.2] - 2026-07-06
+
+### Added
+- **Numeric range enforcement for `number` fields** — revived the dead `Field::$min`/`$max` properties (widened `?int` → `?float`) and wired them end-to-end. `setMin(1.0)->setMax(7.0)->setStep(0.1)` now (a) renders `min`/`max`/`step` as HTML attributes on the input, (b) **clamps the sanitized value server-side** to `[min, max]` so saves can never persist out-of-range data, and (c) reports correct numeric validity via `validateValue()`. Out-of-range values are coerced, never rejected, so the save flow cannot fail on range alone. This is a strict improvement on Carbon Fields, which only emits the HTML attributes and trusts the browser.
+- **Type-aware `setValidation(['min'..'max'])`** — for `number` fields, `min`/`max` are now numeric bounds; for string fields they stay string-length bounds (backward compatible). Removes the dual-meaning confusion that made `min`/`max` unsafe for numbers.
+
+### Fixed
+- **Container save path bypassed validation** — `PostMetaContainer`, `TermMetaContainer`, and `UserMetaContainer` called `sanitizeValue()` but never `validateValue()`, so `wps_validate` and `setValidation` rules were silently ignored for post/term/user meta. Each save loop now runs validation and skips fields that fail (existing meta preserved). Numeric range never triggers a skip because the sanitizer clamps first.
+- **`ReactField::getMin`/`getMax` LSP break** — signatures widened from `?int` to `?float` to match the parent after the `Field` property change. (Note: the bodies still read `toArray()['min']`, which never exists — pre-existing dead code that always returns `null`; the parent getters now take precedence via the property. Tracked for a separate cleanup.)
+
+### Tests
+- `FieldTest::testNumberRangeClampAndAttributes` — covers clamp behavior (below-min, above-max, in-range, non-numeric), float getters, `step` independence, HTML attribute injection into `toArray()`, user-attribute precedence, and non-number field isolation.
+- `FieldTest::testValidationRulesAreTypeAware` — covers numeric `min`/`max` for `number` vs string-length `min`/`max` for `text`.
+- `UserMetaContainerTest::testSaveWrapper` — updated to mock the new `validateValue()` save contract.
+
 ## [1.3.1] - 2026-07-06
 
 ### Added

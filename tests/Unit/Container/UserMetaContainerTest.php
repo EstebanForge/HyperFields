@@ -417,6 +417,7 @@ class UserMetaContainerTest extends \PHPUnit\Framework\TestCase
         $field->shouldReceive('getName')->andReturn('test_field');
         $field->shouldReceive('getDefault')->andReturn('default');
         $field->shouldReceive('sanitizeValue')->with('test_value')->andReturn('test_value');
+        $field->shouldReceive('validateValue')->with('test_value')->andReturn(true);
 
         $this->container->addField($field);
 
