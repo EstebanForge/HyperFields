@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.3.1] - 2026-07-06
+
+### Added
+- **Semantic save action on `OptionsPage`** — re-emits WP's Settings-API save as `hyperfields/options_page/after_save` so consumers hook intent, not raw `update_option_{$name}` plumbing. Gated on `$old !== $new`, so `after_save` fires exactly once per real value change, not on every form submit. Argument order is `(new, old, page)` (intentional reversal of WP's `(old, new, option)`) to match "the current state after save" intent. Mirrors Carbon Fields' `theme_options_container_saved` surface for migration-friendliness.
+- **`hyperfields/options_page/pre_save` filter** — let third parties alter sanitized values before WP writes them. Receives `(output, pre_save_snapshot, OptionsPage_instance)`. Filter consumers must treat the `OptionsPage` argument as read-only; mutating it mid-sanitize (e.g. re-calling `registerSettings()`) has undefined behavior.
+
+### Tests
+- `OptionsPageTest` covers `onOptionSaved` no-op gating (identical `$old`/`$new` does not fire `after_save`), the `(new, old, page)` arg order, and the `pre_save` filter seam being applied during sanitize.
+
 ## [1.3.0] - 2026-07-03
 
 ### Added
