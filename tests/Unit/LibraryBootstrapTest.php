@@ -81,8 +81,8 @@ class LibraryBootstrapTest extends TestCase
                 'LibraryBootstrap::init() cannot be tested fresh. Check the autoload chain.');
         }
 
-        $plugin_file = '/var/www/wp-content/plugins/host-plugin/host-plugin.php';
-        $base_dir = '/var/www/wp-content/plugins/host-plugin/vendor/estebanforge/hyperfields/';
+        $plugin_file = WP_PLUGIN_DIR . '/host-plugin/host-plugin.php';
+        $base_dir = WP_PLUGIN_DIR . '/host-plugin/vendor/estebanforge/hyperfields/';
         $version = '9.9.9';
 
         LibraryBootstrap::init([
@@ -94,14 +94,21 @@ class LibraryBootstrapTest extends TestCase
         $this->assertSame($base_dir, HYPERFIELDS_ABSPATH);
         $this->assertSame($plugin_file, HYPERFIELDS_PLUGIN_FILE);
         $this->assertSame(
-            'http://example.com/wp-content/plugins/host-plugin/vendor/estebanforge/hyperfields/',
+            WP_PLUGIN_URL . '/host-plugin/vendor/estebanforge/hyperfields/',
             HYPERFIELDS_PLUGIN_URL
         );
         $this->assertSame($version, HYPERFIELDS_VERSION);
-        // LibraryBootstrap provides fallback HYPERPRESS_* constants when used standalone.
+        // HyperFields still provides a HYPERPRESS_VERSION fallback (a plain
+        // version string, harmless if HyperPress-Core isn't present) but must
+        // NOT define HYPERPRESS_PLUGIN_URL: that constant is owned by
+        // HyperPress-Core and resolved from its own base directory. An earlier
+        // version copied HYPERFIELDS_PLUGIN_URL here, silently propagating a
+        // broken (404ing) URL into HyperPress-Core's frontend asset enqueue.
         $this->assertTrue(defined('HYPERPRESS_VERSION'));
-        $this->assertTrue(defined('HYPERPRESS_PLUGIN_URL'));
         $this->assertSame($version, HYPERPRESS_VERSION);
-        $this->assertSame(HYPERFIELDS_PLUGIN_URL, HYPERPRESS_PLUGIN_URL);
+        $this->assertFalse(
+            defined('HYPERPRESS_PLUGIN_URL'),
+            'HyperFields must not define HYPERPRESS_PLUGIN_URL; HyperPress-Core owns it and resolves it from its own base directory.'
+        );
     }
 }
