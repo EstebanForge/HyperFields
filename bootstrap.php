@@ -12,7 +12,7 @@ declare(strict_types=1);
  */
 
 if (!defined('HYPERFIELDS_DEFAULT_VERSION')) {
-    define('HYPERFIELDS_DEFAULT_VERSION', '1.4.3');
+    define('HYPERFIELDS_DEFAULT_VERSION', '1.4.4');
 }
 
 // Define global functions BEFORE early-return guards so they're always available.
@@ -102,7 +102,32 @@ if (!function_exists('hyperfields_is_class_shadowed')) {
      */
     function hyperfields_is_class_shadowed(string $class): bool
     {
-        return class_exists($class) && !method_exists($class, 'resolveContentUrl');
+        if (!class_exists($class)) {
+            return false;
+        }
+
+        // Absent method → definitely shadowed (the original OBA vector: a
+        // < 1.4.1 class lacks resolveContentUrl entirely).
+        if (!method_exists($class, 'resolveContentUrl')) {
+            return true;
+        }
+
+        // Behavioral drift: the method exists but the loaded class is older
+        // than the version that introduced the stable resolveContentUrl()
+        // contract (1.4.1). Catches a present-but-changed method that
+        // method_exists alone misses. Classes without a VERSION stamp
+        // (pre-1.4.4, or test stubs) skip this check and fall through as
+        // not-shadowed (the method_exists check above already governed them).
+        // hasConstant() first: getConstant() on a missing constant is
+        // deprecated since PHP 8.5.
+        $reflection = new \ReflectionClass($class);
+        if ($reflection->hasConstant('VERSION')) {
+            if (version_compare((string) $reflection->getConstant('VERSION'), '1.4.1', '<')) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
 

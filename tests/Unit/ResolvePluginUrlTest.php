@@ -56,6 +56,18 @@ class ResolvePluginUrlTest extends TestCase
     }
 
     /**
+     * Behavioral drift: the method exists but the loaded class is older than
+     * 1.4.1 (the version that introduced the stable resolveContentUrl()
+     * contract). The VERSION-constant check catches this where method_exists
+     * alone would miss it — Opus's #1 point. A present-but-changed method is
+     * still a shadow.
+     */
+    public function testIsClassShadowedDetectsVersionDrift(): void
+    {
+        $this->assertTrue(\hyperfields_is_class_shadowed(DriftedBootstrap::class), 'Class with the method but an old VERSION IS shadowed (drift).');
+    }
+
+    /**
      * A LibraryBootstrap that has resolveContentUrl() (the normal case)
      * delegates to it and never alarms.
      */
@@ -185,4 +197,19 @@ class FreshBootstrap
 class StaleBootstrap
 {
     // Intentionally no resolveContentUrl().
+}
+
+/**
+ * Stub LibraryBootstrap that HAS resolveContentUrl() but stamps an OLD VERSION
+ * (< 1.4.1). Mimics a present-but-behaviorally-changed method — the drift case
+ * method_exists alone cannot detect. The version-aware predicate catches it.
+ */
+class DriftedBootstrap
+{
+    public const VERSION = '1.3.0';
+
+    public static function resolveContentUrl(string $plugin_dir): string
+    {
+        return 'drifted://' . $plugin_dir;
+    }
 }
