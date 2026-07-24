@@ -16,7 +16,7 @@ final class LibraryBootstrap
      * the method exists, closing the method_exists blind spot (present-but-
      * changed methods). Must track the library release version.
      */
-    public const VERSION = '1.4.4';
+    public const VERSION = '1.4.5';
     /**
      * Initialize HyperFields when used as a library.
      *
