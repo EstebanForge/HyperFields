@@ -2,6 +2,9 @@
 
 ## [1.4.5] - 2026-07-24
 
+### Fixed
+- **Admin asset 404s when HyperFields runs under HyperPress.** `TemplateLoader::enqueueAssets()` and `ExportImportUI::enqueuePageAssets()` preferred `HYPERPRESS_PLUGIN_URL` over `HYPERFIELDS_PLUGIN_URL` for HyperFields' own assets (`hyperfields-admin.css`, `conditional-fields.js`, `media-fields.js`, `map-field.js`, `hyperfields-admin.js`) — a legacy of the HyperFields/HyperPress split. Those files live under `hyperfields/assets/`, not `hyperpress-core/assets/`, so every request 404'd. Now prefers `HYPERFIELDS_PLUGIN_URL` (and `HYPERFIELDS_VERSION` for cache-busting), falling back to `HYPERPRESS_*` only when HyperFields' own URL is unavailable.
+
 ### Changed
 - `package.json` version resynced to the library version (had drifted during earlier manual bumps).
 - README: added a Jetpack Autoloader note pointing consumers to the direct-require gate.
