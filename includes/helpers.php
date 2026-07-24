@@ -682,7 +682,7 @@ if (!function_exists('hyperfields_resolve_content_url')) {
         // Shadow guard: a stale bundled LibraryBootstrap (< 1.4.1) lacks
         // resolveContentUrl(). Bail with '' so sibling callers (HyperPress-Core,
         // HyperBlocks) skip asset enqueue instead of fataling on the absent
-        // method — the OBA outage class. Sibling callers already treat '' as
+        // method — the staging outage class. Sibling callers already treat '' as
         // the "not HTTP-reachable, bail" signal. The class FQCN and alarm
         // callable are injectable so the guard is unit-testable via stubs.
         if (hyperfields_is_class_shadowed($class)) {

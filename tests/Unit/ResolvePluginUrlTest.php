@@ -11,7 +11,7 @@ use PHPUnit\Framework\TestCase;
  * Regression guard for the class-shadowing safety net in
  * hyperfields_resolve_plugin_url() / hyperfields_is_class_shadowed().
  *
- * Background (OBA staging outage, 2026-07-24): the multi-instance version
+ * Background (a staging outage, 2026-07): the multi-instance version
  * election guarantees the newest *init* runs but cannot guarantee the newest
  * *class* is loaded. When a consumer bundles a stale HyperFields (< 1.4.1)
  * whose LibraryBootstrap lacks resolveContentUrl(), the elected-newest init
@@ -192,7 +192,7 @@ class FreshBootstrap
 /**
  * Stub LibraryBootstrap that LACKS resolveContentUrl() — mimics a stale bundled
  * copy (< 1.4.1) shadowing the elected-newest init. The exact shape that caused
- * the OBA fatal.
+ * the original fatal.
  */
 class StaleBootstrap
 {

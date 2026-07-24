@@ -68,7 +68,7 @@ be relied upon in vendored contexts.
 
 ### Consumers MUST directly require `automattic/jetpack-autoloader`
 
-**This is the non-obvious gate that caused the OBA staging outage.** Jetpack's
+**This is the non-obvious gate that caused a staging outage.** Jetpack's
 Composer plugin only generates its manifest (`vendor/composer/jetpack_autoload_classmap.php`)
 and takes over class loading when `automattic/jetpack-autoloader` is a **direct**
 require of *your* plugin's `composer.json`. Transitive presence — pulled in

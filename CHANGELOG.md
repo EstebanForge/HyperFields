@@ -6,7 +6,7 @@
 - **`LibraryBootstrap::VERSION` constant + version-aware shadow predicate.** Closes the `method_exists` blind spot a peer review (Claude Opus) flagged: `method_exists` only catches *absent* methods, not a method present in both versions but with changed behavior. `hyperfields_is_class_shadowed()` now also treats a loaded class whose `VERSION` is older than 1.4.1 (when `resolveContentUrl()`'s stable contract was introduced) as shadowed — catching behavioral drift, not just absence. Classes without the stamp (pre-1.4.4, test stubs) skip the version check and fall through to `method_exists`. Uses `ReflectionClass::hasConstant()` (not `getConstant()` directly) to avoid the PHP 8.5 deprecation for non-existent constants.
 
 ### Fixed
-- Companion doc mirrors: the "consumers must directly require `automattic/jetpack-autoloader`" guidance (the non-obvious gate that caused the OBA outage) now also lives in `estebanforge/hyperblocks` and `estebanforge/hyperpress-core` docs, not only HyperFields'.
+- Companion doc mirrors: the "consumers must directly require `automattic/jetpack-autoloader`" guidance (the non-obvious gate that caused a staging outage) now also lives in `estebanforge/hyperblocks` and `estebanforge/hyperpress-core` docs, not only HyperFields'.
 
 ### Notes
 - `LibraryBootstrap::VERSION` must track the library release version on future bumps (the `version-bump.sh` script does not yet update it).
@@ -25,7 +25,7 @@
 ## [1.4.2] - 2026-07-24
 
 ### Fixed
-- **Class-shadowing fatal eliminated: a stale bundled `HyperFields\LibraryBootstrap` lacking `resolveContentUrl()` (added in 1.4.1) no longer crashes the request when a newer init wins the multi-instance version election.** The election guarantees the newest *init* runs but cannot guarantee the newest *class* is loaded — PHP's autoloader stack may resolve the class from an older bundled copy. Previously the newest init then called a method absent on the stale class and the process fatal'd (`Call to undefined method ... resolveContentUrl()`). The call is now guarded: when the shadow signature is detected (class loaded, method absent) the resolver emits a diagnosable `error_log` alarm and falls back to `plugins_url()` instead of crashing. This is the direct fix for the OBA staging outage class of failure.
+- **Class-shadowing fatal eliminated: a stale bundled `HyperFields\LibraryBootstrap` lacking `resolveContentUrl()` (added in 1.4.1) no longer crashes the request when a newer init wins the multi-instance version election.** The election guarantees the newest *init* runs but cannot guarantee the newest *class* is loaded — PHP's autoloader stack may resolve the class from an older bundled copy. Previously the newest init then called a method absent on the stale class and the process fatal'd (`Call to undefined method ... resolveContentUrl()`). The call is now guarded: when the shadow signature is detected (class loaded, method absent) the resolver emits a diagnosable `error_log` alarm and falls back to `plugins_url()` instead of crashing. This is the direct fix for a staging-outage class of failure.
 
 ### Added
 - `hyperfields_resolve_plugin_url(string $plugin_dir, string $plugin_file_path, string $plugin_version, string $class = 'HyperFields\LibraryBootstrap', ?callable $alarm = null): string` — extracts the library URL resolution (formerly inline in `hyperfields_run_initialization_logic()`) into a testable function with the class FQCN and alarm callable injectable.
