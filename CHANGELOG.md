@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.4.3] - 2026-07-24
+
+### Fixed
+- **Class-shadowing guard extended to the shared procedural wrapper `hyperfields_resolve_content_url()` (in `includes/helpers.php`)** — the chokepoint sibling libraries actually call. 1.4.2 guarded only HyperFields' own bootstrap init call; sibling paths were still vulnerable: HyperPress-Core's bootstrap (`function_exists('hyperfields_resolve_content_url') ? hyperfields_resolve_content_url(...)`) and HyperBlocks' `hyperblocks_resolve_content_url()` both delegate to this wrapper, so a stale bundled `LibraryBootstrap` (< 1.4.1) lacking `resolveContentUrl()` would still fatal through them. The wrapper now runs the same shadow predicate and returns `''` (siblings already treat `''` as the "bail" signal) instead of calling the absent method. The class FQCN is injectable for testing.
+
+### Added
+- `tests/Unit/ResolvePluginUrlTest.php`: two regression tests for the wrapper path (`testWrapperDelegatesToFreshClass`, `testWrapperBailsOnStaleClassInsteadOfFataling`). Removing the wrapper guard makes the stale test fatal.
+
+### Notes
+- 1.4.2 (the bootstrap-path guard) remains a strict improvement and is safe; 1.4.3 closes the sibling-wrapper hole identified in peer review. Together they cover both external call sites of `LibraryBootstrap::resolveContentUrl()`.
+
 ## [1.4.2] - 2026-07-24
 
 ### Fixed
