@@ -451,7 +451,7 @@ class AdminPageTest extends \PHPUnit\Framework\TestCase
             define('HYPERPRESS_VERSION', '2.0.7');
         }
 
-        $this->page->setParentSlug('wicket-settings');
+        $this->page->setParentSlug('test-settings');
 
         Functions\when('is_admin')->justReturn(true);
         Functions\when('wp_enqueue_style')->justReturn();
@@ -462,7 +462,7 @@ class AdminPageTest extends \PHPUnit\Framework\TestCase
             ->atLeast()->once()
             ->andReturn();
 
-        $this->page->enqueueAssets('wicket-settings_page_test-page');
+        $this->page->enqueueAssets('test-settings_page_test-page');
     }
 
     public function testEnqueueAssetsWrongPage()

@@ -33,7 +33,7 @@
 - `tests/Unit/ResolvePluginUrlTest.php` — four regression tests pinning the guard: fresh class delegates, stale class falls back + alarms with the correct message, missing class falls back silently, and the predicate detects the stale shape. Removing the guard makes the stale test fatal.
 
 ### Notes
-- This guard is a safety net, not the root-cause fix. The root cause is that consumers (e.g. `wicket-wp-account-centre`, `wicket-wp-importer`) pull `automattic/jetpack-autoloader` only transitively via `hyperfields → jetpack`, so Jetpack never adopts them and stays inert. Consumers must *directly* require `automattic/jetpack-autoloader` for Jetpack to generate its manifest and own class identity. See `docs/library-bootstrap.md`.
+- This guard is a safety net, not the root-cause fix. The root cause is that consumers (e.g. any distributable plugin vendoring a Hyper library) pull `automattic/jetpack-autoloader` only transitively via `hyperfields → jetpack`, so Jetpack never adopts them and stays inert. Consumers must *directly* require `automattic/jetpack-autoloader` for Jetpack to generate its manifest and own class identity. See `docs/library-bootstrap.md`.
 
 ## [1.4.1] - 2026-07-23
 
