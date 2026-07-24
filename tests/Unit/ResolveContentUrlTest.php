@@ -42,9 +42,9 @@ class ResolveContentUrlTest extends TestCase
 
     /**
      * The procedural wrapper hyperfields_resolve_content_url() is defined in
-     * includes/helpers.php and delegates to the static method. It is exercised
-     * by HyperBlocks/HyperPress in production (where helpers.php loads at
-     * autoload time); the static method itself is covered above.
+     * src/helpers.php and delegates to the static method. It is exercised
+     * by HyperBlocks/HyperPress in production (loaded via
+     * LibraryBootstrap::init()); the static method itself is covered above.
      */
 
     /**

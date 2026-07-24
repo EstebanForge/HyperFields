@@ -6,6 +6,7 @@ namespace HyperFields\Tests\Unit;
 
 use Brain\Monkey;
 use Brain\Monkey\Functions;
+use HyperFields\Config;
 use HyperFields\LibraryBootstrap;
 use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
@@ -13,9 +14,10 @@ use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 
 /**
- * LibraryBootstrap tests must run in a child process: the bootstrap asserts
- * that init() defines the HYPERFIELDS and HYPERPRESS constants fresh, which is
- * impossible once any other test or the plugin bootstrap has defined them.
+ * LibraryBootstrap tests must run in a child process: init() mutates Config
+ * static state and defines the HYPERPRESS fallback constant, which must be
+ * fresh. Config static properties reset per process, and the HYPERPRESS
+ * constant cannot be undefined once set.
  */
 class LibraryBootstrapTest extends TestCase
 {
@@ -65,50 +67,67 @@ class LibraryBootstrapTest extends TestCase
 
     #[RunInSeparateProcess]
     #[PreserveGlobalState(false)]
-    public function testLibraryBootstrapDefinesConstants(): void
+    public function testLibraryBootstrapPopulatesConfig(): void
     {
         // In a truly isolated child process the plugin bootstrap has not run,
-        // so the HYPERFIELDS and HYPERPRESS constants should be undefined here.
-        // If a future change causes the bootstrap to pre-define them (e.g. an
-        // autoloaded file firing init()), surface it loudly instead of skipping.
+        // so Config must not be initialized and the HYPERPRESS fallback
+        // constants must be undefined. If a future change causes the autoload
+        // chain to fire init() early, surface it loudly instead of skipping.
         if (
-            defined('HYPERFIELDS_INSTANCE_LOADED')
-            || defined('HYPERFIELDS_PLUGIN_URL')
+            Config::isInitialized()
             || defined('HYPERPRESS_PLUGIN_URL')
             || defined('HYPERPRESS_VERSION')
         ) {
-            $this->fail('HYPERFIELDS or HYPERPRESS constants already defined in isolated process; ' .
+            $this->fail('Config already initialized or HYPERPRESS constants already defined in isolated process; ' .
                 'LibraryBootstrap::init() cannot be tested fresh. Check the autoload chain.');
         }
 
         $plugin_file = WP_PLUGIN_DIR . '/host-plugin/host-plugin.php';
         $base_dir = WP_PLUGIN_DIR . '/host-plugin/vendor/estebanforge/hyperfields/';
-        $version = '9.9.9';
 
         LibraryBootstrap::init([
             'plugin_file' => $plugin_file,
             'base_dir' => $base_dir,
-            'version' => $version,
         ]);
 
-        $this->assertSame($base_dir, HYPERFIELDS_ABSPATH);
-        $this->assertSame($plugin_file, HYPERFIELDS_PLUGIN_FILE);
+        $this->assertTrue(Config::isInitialized());
+        $this->assertSame($base_dir, Config::$abspath);
+        $this->assertSame($plugin_file, Config::$pluginFile);
         $this->assertSame(
             WP_PLUGIN_URL . '/host-plugin/vendor/estebanforge/hyperfields/',
-            HYPERFIELDS_PLUGIN_URL
+            Config::$pluginUrl
         );
-        $this->assertSame($version, HYPERFIELDS_VERSION);
-        // HyperFields still provides a HYPERPRESS_VERSION fallback (a plain
-        // version string, harmless if HyperPress-Core isn't present) but must
-        // NOT define HYPERPRESS_PLUGIN_URL: that constant is owned by
-        // HyperPress-Core and resolved from its own base directory. An earlier
-        // version copied HYPERFIELDS_PLUGIN_URL here, silently propagating a
-        // broken (404ing) URL into HyperPress-Core's frontend asset enqueue.
-        $this->assertTrue(defined('HYPERPRESS_VERSION'));
-        $this->assertSame($version, HYPERPRESS_VERSION);
+        // VERSION is now a class constant (single source of truth), independent
+        // of the version argument passed to init().
+        $this->assertSame('1.4.5', Config::VERSION);
+        // HyperFields defines NO HYPERPRESS_* constants: those are owned by
+        // HyperPress-Core (no cross-plugin shared state), which resolves both
+        // HYPERPRESS_VERSION and HYPERPRESS_PLUGIN_URL from its own bootstrap.
+        // An earlier HyperFields version defined HYPERPRESS_VERSION and copied
+        // HYPERFIELDS_PLUGIN_URL verbatim, silently propagating a broken
+        // (404ing) URL into HyperPress-Core's frontend asset enqueue.
+        $this->assertFalse(
+            defined('HYPERPRESS_VERSION'),
+            'HyperFields must not define HYPERPRESS_VERSION; HyperPress-Core owns it.'
+        );
         $this->assertFalse(
             defined('HYPERPRESS_PLUGIN_URL'),
             'HyperFields must not define HYPERPRESS_PLUGIN_URL; HyperPress-Core owns it and resolves it from its own base directory.'
+        );
+    }
+
+    #[RunInSeparateProcess]
+    #[PreserveGlobalState(false)]
+    public function testInitBailsWhenElectionConstantAlreadyDefined(): void
+    {
+        // Simulate a prior copy having claimed the first-to-boot election guard.
+        define('HyperFields\\LOADED', '/prior-copy/src');
+
+        LibraryBootstrap::init([]);
+
+        $this->assertFalse(
+            Config::isInitialized(),
+            'init() must bail without initializing when the HyperFields\\LOADED election constant is already set.'
         );
     }
 }

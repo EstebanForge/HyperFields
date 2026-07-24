@@ -420,9 +420,7 @@ class AdminPageTest extends \PHPUnit\Framework\TestCase
     public function testEnqueueAssetsForSettingsPageHook()
     {
         // TemplateLoader reads HYPERPRESS_PLUGIN_URL first; define it (guarded,
-        // same pattern as OptionsPageTest) so the enqueue actually runs. We use
-        // HYPERPRESS_* rather than HYPERFIELDS_* so we don't collide with
-        // LibraryBootstrapTest's assertion on HYPERFIELDS_PLUGIN_URL.
+        // same pattern as OptionsPageTest) so the enqueue actually runs.
         if (!defined('HYPERPRESS_PLUGIN_URL')) {
             define('HYPERPRESS_PLUGIN_URL', 'http://example.com/plugin/');
         }

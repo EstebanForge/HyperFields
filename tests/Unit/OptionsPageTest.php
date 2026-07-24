@@ -464,8 +464,8 @@ class OptionsPageTest extends \PHPUnit\Framework\TestCase
     #[\PHPUnit\Framework\Attributes\PreserveGlobalState(false)]
     public function testSanitizeOptionsInvalidCompactInput()
     {
-        if (!defined('HYPERPRESS_COMPACT_INPUT')) {
-            define('HYPERPRESS_COMPACT_INPUT', true);
+        if (!defined('HYPERFIELDS_COMPACT_INPUT')) {
+            define('HYPERFIELDS_COMPACT_INPUT', true);
         }
 
         // The pre_save filter seam (added with the save-hook feature) fires
@@ -474,7 +474,7 @@ class OptionsPageTest extends \PHPUnit\Framework\TestCase
         // so stub it here locally to mirror real WP pass-through behavior.
         Functions\when('apply_filters')->returnArg(2);
 
-        $_POST['hyperpress_compact_input'] = '{"hyperpress_options": "not_an_array"}'; // Invalid format
+        $_POST['hyperfields_compact_input'] = '{"hyperpress_options": "not_an_array"}'; // Invalid format
         $_POST['hyperpress_active_tab'] = 'test_section';
 
         $section = $this->page->addSection('test_section', 'Test Section');

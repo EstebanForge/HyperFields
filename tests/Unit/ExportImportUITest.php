@@ -499,8 +499,8 @@ class ExportImportUITest extends \PHPUnit\Framework\TestCase
     {
         // enqueuePageAssets() calls enqueueDiffAssets() which appends CSS via
         // wp_add_inline_style. TemplateLoader::enqueueAssets() reaches is_admin()
-        // when HYPERFIELDS_PLUGIN_URL is defined (it may be, from sibling tests),
-        // so stub it explicitly rather than relying on the constant being unset.
+        // (Config::$pluginUrl is always set, defaulting to empty), so stub it
+        // explicitly.
         Functions\when('is_admin')->justReturn(false);
 
         $inlineStyleEnqueued = false;

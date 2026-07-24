@@ -22,8 +22,8 @@ composer update --no-dev --optimize-autoloader   # Production update
 ```
 
 ### Version Management
-- Update version in `composer.json`
-- Update `HYPERFIELDS_DEFAULT_VERSION` in `bootstrap.php` (single source for PHP fallback/default)
+- Update version in `composer.json` (canonical source)
+- `src/Config.php` `VERSION` constant mirrors it for the PHP side — run `composer version-bump` to update both atomically
 - Update `CHANGELOG.md` with changes
 
 ## Architecture & Key Components
@@ -38,22 +38,23 @@ composer update --no-dev --optimize-autoloader   # Production update
 ### Directory Structure
 ```
 src/                    # PSR-4 autoloaded as HyperFields\
-  Admin/               # Activation, options pages, migrations, export/import UI
-    ExportImportUI.php # Admin submenu page for Export / Import
-  Container/           # Field containers (PostMeta, TermMeta, UserMeta, Options)
-  Templates/           # Field UI templates
-  Assets.php          # Asset management
-  BlockFieldAdapter.php  # Gutenberg integration
-  ConditionalLogic.php   # Field visibility logic
-  ExportImport.php    # Export / Import core logic
-  Field.php           # Base field class
-  HyperFields.php     # Main API class
-  Registry.php        # Field registration
-  TemplateLoader.php  # Template rendering system
-includes/
-  helpers.php         # Helper functions (hf_* prefix)
-  backward-compatibility.php  # Legacy class aliases
-bootstrap.php         # Bootstrap logic (version resolution, initialization)
+  Admin/               # Activation, options pages, export/import UI, logs
+  Compatibility/       # wp-settings parity / dual-write store layer
+  Container/           # Field containers (PostMeta, TermMeta, UserMeta)
+  Transfer/            # Transfer orchestration + audit logging
+  Validation/          # SchemaValidator for JSON imports
+  templates/           # Field UI templates
+  Assets.php           # Asset management
+  BlockFieldAdapter.php # Gutenberg integration
+  Config.php           # VERSION constant + runtime path/URL (prefix-safe)
+  ExportImport.php     # Export / Import core logic
+  Field.php            # Base field class
+  HyperFields.php      # Main API class
+  LibraryBootstrap.php # Library entry point: init() (prefixable)
+  Registry.php         # Field registration
+  TemplateLoader.php   # Template rendering system
+  helpers.php          # Procedural helpers (hf_* prefix)
+bootstrap.php         # Dev-env auto-init bridge (delegates to LibraryBootstrap::init())
 ```
 
 ### Key Classes & Their Purpose
@@ -142,17 +143,28 @@ $container->addField([...]);
 
 ## Bootstrap System
 
-HyperFields uses a version resolution system that allows multiple instances to coexist:
+HyperFields self-initializes via `HyperFields\LibraryBootstrap::init()`, which is
+idempotent (guarded by `Config::isInitialized()`). When loaded directly through
+Composer, `bootstrap.php` schedules `init()` at `after_setup_theme`; vendored
+or namespace-prefixed consumers call `LibraryBootstrap::init()` explicitly.
 
-1. Each instance registers itself as a candidate
-2. The latest version wins and loads first
-3. Backward-compatibility layer ensures old class names still work
+Duplicate-load protection: the first copy to reach `init()` claims the
+namespace-scoped `HyperFields\LOADED` constant and wins; later copies bail
+before bootstrapping, so two plugins shipping HyperFields do not double-init or
+fatal. This is a first-to-boot guard (not newest-wins, no version resolution,
+no class-shadow guard). The guard is namespace-scoped, so a consumer that
+optionally prefixes the namespace with [Mozart](https://github.com/coenjacobs/mozart) gets fully isolated
+copies that each boot independently. See the repository for a ready-to-use
+prefix config if you need version determinism across divergent copies.
 
-**Constants defined:**
-- `HYPERFIELDS_VERSION` - Current version
-- `HYPERFIELDS_ABSPATH` - Plugin absolute path
-- `HYPERFIELDS_PLUGIN_URL` - Plugin/library base URL
-- `HYPERFIELDS_BOOTSTRAP_LOADED` - Bootstrap flag
+Runtime paths live on `HyperFields\Config` (prefix-safe), not global constants:
+- `Config::VERSION` — semantic version (mirrors `composer.json`)
+- `Config::$abspath` — library root path, set at init
+- `Config::$pluginUrl` — public URL, or empty when not web-reachable
+- `Config::$pluginFile` — absolute path to the bootstrap file
+
+HyperFields defines **no** `HYPERPRESS_*` constants; HyperPress owns those and
+resolves them from its own bootstrap (no cross-plugin shared state).
 
 ## Integration with Other Plugins
 
@@ -233,5 +245,4 @@ if (!$result['success']) {
 - Uses PSR-4 autoloading
 - Optimized for production with `--optimize-autoloader`
 - No external dependencies (pure WordPress)
-- Backward-compatible with legacy `HMApi\` class names
 - Library-only in this repository (no plugin entrypoint)

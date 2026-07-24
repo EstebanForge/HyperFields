@@ -96,29 +96,10 @@ if [[ -f "$PROJECT_DIR/package.json" ]]; then
   echo "  ✓ package.json"
 fi
 
-# Update bootstrap.php fallback/default version
-if [[ -f "$PROJECT_DIR/bootstrap.php" ]]; then
-  # Preferred pattern (current architecture): single source of truth constant.
-  if grep -q "HYPERFIELDS_DEFAULT_VERSION" "$PROJECT_DIR/bootstrap.php"; then
-    sedi -E "s/(define\('HYPERFIELDS_DEFAULT_VERSION',[[:space:]]*')[^']+('\);)/\1$NEW_VERSION\2/" "$PROJECT_DIR/bootstrap.php"
-  fi
-
-  # Legacy safety net: update any remaining exact old-version literals.
-  sedi "s/'$CURRENT_VERSION'/'$NEW_VERSION'/g" "$PROJECT_DIR/bootstrap.php"
-  echo "  ✓ bootstrap.php (default/fallback versions)"
-fi
-
-# Update OptionsPage.php fallback versions
-if [[ -f "$PROJECT_DIR/src/OptionsPage.php" ]]; then
-  # Update fallback versions in OptionsPage
-  # Match patterns like: '2.0.7', '2.1.0', etc.
-  sedi "s/'$CURRENT_VERSION'/'$NEW_VERSION'/g" "$PROJECT_DIR/src/OptionsPage.php"
-  echo "  ✓ src/OptionsPage.php (fallback versions)"
-fi
-
-# Scan ALL PHP files under src/ for any remaining old-version literals the
-# targeted steps above missed (e.g. class-level `const VERSION = '...'` stamps
-# like src/LibraryBootstrap.php). Idempotent: files already bumped have no match.
+# Scan ALL PHP files under src/ for old-version literals. This is the single
+# mechanism for the PHP side: it catches `Config::VERSION = '...'` (the
+# canonical source) and any other literal stamp. Idempotent: files already
+# bumped have no match.
 while IFS= read -r -d '' src_file; do
     if grep -q "'$CURRENT_VERSION'" "$src_file" 2>/dev/null; then
         sedi "s/'$CURRENT_VERSION'/'$NEW_VERSION'/g" "$src_file"
