@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.4.2] - 2026-07-24
+
+### Fixed
+- **Class-shadowing fatal eliminated: a stale bundled `HyperFields\LibraryBootstrap` lacking `resolveContentUrl()` (added in 1.4.1) no longer crashes the request when a newer init wins the multi-instance version election.** The election guarantees the newest *init* runs but cannot guarantee the newest *class* is loaded — PHP's autoloader stack may resolve the class from an older bundled copy. Previously the newest init then called a method absent on the stale class and the process fatal'd (`Call to undefined method ... resolveContentUrl()`). The call is now guarded: when the shadow signature is detected (class loaded, method absent) the resolver emits a diagnosable `error_log` alarm and falls back to `plugins_url()` instead of crashing. This is the direct fix for the OBA staging outage class of failure.
+
+### Added
+- `hyperfields_resolve_plugin_url(string $plugin_dir, string $plugin_file_path, string $plugin_version, string $class = 'HyperFields\LibraryBootstrap', ?callable $alarm = null): string` — extracts the library URL resolution (formerly inline in `hyperfields_run_initialization_logic()`) into a testable function with the class FQCN and alarm callable injectable.
+- `hyperfields_is_class_shadowed(string $class): bool` — pure predicate returning true iff the LibraryBootstrap class is loaded but lacks `resolveContentUrl()`. The alarm trigger logic, unit-testable without `error_log` capture.
+- `tests/Unit/ResolvePluginUrlTest.php` — four regression tests pinning the guard: fresh class delegates, stale class falls back + alarms with the correct message, missing class falls back silently, and the predicate detects the stale shape. Removing the guard makes the stale test fatal.
+
+### Notes
+- This guard is a safety net, not the root-cause fix. The root cause is that consumers (e.g. `wicket-wp-account-centre`, `wicket-wp-importer`) pull `automattic/jetpack-autoloader` only transitively via `hyperfields → jetpack`, so Jetpack never adopts them and stays inert. Consumers must *directly* require `automattic/jetpack-autoloader` for Jetpack to generate its manifest and own class identity. See `docs/library-bootstrap.md`.
+
 ## [1.4.1] - 2026-07-23
 
 ### Fixed
