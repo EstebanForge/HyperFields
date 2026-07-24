@@ -5,7 +5,7 @@
 ### Changed
 - `package.json` version resynced to the library version (had drifted during earlier manual bumps).
 - README: added a Jetpack Autoloader note pointing consumers to the direct-require gate.
-- `LibraryBootstrap::VERSION` bumped to match the release (stamps the class file for the version-aware shadow predicate; the `version-bump.sh` script does not yet update it).
+- `LibraryBootstrap::VERSION` bumped to match the release (stamps the class file for the version-aware shadow predicate). `version-bump.sh` now scans `src/` recursively, so class-level version stamps are updated automatically on future bumps.
 
 ## [1.4.4] - 2026-07-24
 
