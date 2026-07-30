@@ -99,7 +99,7 @@ class LibraryBootstrapTest extends TestCase
         );
         // VERSION is now a class constant (single source of truth), independent
         // of the version argument passed to init().
-        $this->assertSame('1.4.5', Config::VERSION);
+        $this->assertSame('1.5.0', Config::VERSION);
         // HyperFields defines NO HYPERPRESS_* constants: those are owned by
         // HyperPress-Core (no cross-plugin shared state), which resolves both
         // HYPERPRESS_VERSION and HYPERPRESS_PLUGIN_URL from its own bootstrap.

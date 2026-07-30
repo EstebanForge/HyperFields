@@ -106,6 +106,33 @@ Available field types:
 
 Each field type has its own template in `src/templates/fields/`
 
+## Cache Invalidation (transients + OPcache)
+
+`HyperFields\CacheInvalidator` keeps cached representations of HyperFields data coherent after a save. It hooks the semantic save actions (`hyperfields/options_page/after_save`, `hyperfields/settings/after_save`, `hyperfields/{post,term,user}_meta_container_saved`, `hyperfields/import/after`), each of which fires only on a real value change, and clears:
+
+- **Transients** - backend-aware: with no external object cache it deletes every `_transient_*` / `_site_transient_*` row from `wp_options` (and `wp_sitemeta` on a multisite main network); with a persistent object cache (Redis/Memcached) transients live only in the cache under the `transient` / `site-transient` groups, so it flushes those groups surgically via `wp_cache_flush_group()` instead.
+- **OPcache** - `opcache_reset()` when the extension is available.
+
+Wired in automatically by `LibraryBootstrap::init()`. Requires WordPress 6.5+ (guarantees `wp_cache_flush_group()`).
+
+**Filters:**
+- `hyperfields/cache/auto_invalidate` (master switch, default `true`)
+- `hyperfields/cache/flush_transients` (default `true`)
+- `hyperfields/cache/flush_object_cache` (default `false`) - opt-in full `wp_cache_flush()`, the documented anti-pattern; use only on a persistent backend that lacks group-flush support.
+- `hyperfields/cache/reset_opcache` (default `true`)
+
+Disable everything:
+```php
+add_filter('hyperfields/cache/auto_invalidate', '__return_false');
+```
+
+Manual flush (wp-cron, migrations, importers that bypass the save actions):
+```php
+HyperFields\CacheInvalidator::flush();
+// or
+hf_flush_hyperfields_cache();
+```
+
 ## Development Patterns
 
 ### Creating a New Field Type
@@ -240,8 +267,8 @@ if (!$result['success']) {
 
 ## Important Notes
 
-- PHP 8.1+ required
-- WordPress 5.0+ required
+- PHP 8.2+ required
+- WordPress 6.5+ required
 - Uses PSR-4 autoloading
 - Optimized for production with `--optimize-autoloader`
 - No external dependencies (pure WordPress)
