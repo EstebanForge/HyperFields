@@ -46,33 +46,37 @@ a ready-to-use config.
 | `plugin_url` | `string` | Public URL to the HyperFields library root (trailing slash). |
 | `base_dir` | `string` | Absolute path to the HyperFields library root. Defaults to the directory containing `LibraryBootstrap.php`. |
 
-## Why explicit args are required for vendored usage
+## URL resolution and the web-reachability deferral
 
-`LibraryBootstrap::init()` has a URL auto-detection fallback: when `plugin_url`
-is omitted it calls `resolve_plugin_url()`, which uses `plugin_dir_path()` to
-walk up from the library's `base_dir` and find the enclosing WP plugin root.
+When `plugin_url` is omitted, `init()` calls `resolve_plugin_url()`, which
+delegates to `HyperFields\LibraryBootstrap::resolveContentUrl()`. That resolver
+walks the web-accessible WordPress content roots (`WP_PLUGIN_DIR`,
+`WPMU_PLUGIN_DIR`, `WP_CONTENT_DIR`, and the active theme template/stylesheet
+directories), canonicalising both the query path and each root with
+`realpath()` / `wp_normalize_path()`, and returns the first root that prefixes
+the library's `base_dir` plus the relative remainder as the URL. It returns
+`''` when the library sits under none of them.
 
-This works when the library's files sit directly under a path that WordPress
-recognises as a plugin directory. It **silently fails** in environments where:
+Since the deferral landed, `init()` no longer claims the namespace identity
+when the URL cannot be resolved. When `resolve_plugin_url()` returns `''` and
+no explicit `plugin_url` was passed, `init()` returns **without** defining
+`HyperFields\LOADED` or writing `Config::$pluginUrl`, so a web-reachable copy
+(e.g. one bundled inside a plugin under `wp-content/`) is free to reach
+`init()` and claim the identity. The classic failure mode — a non-web-reachable
+copy locking out a reachable one with an empty asset URL, leaving admin/field
+assets unenqueued — no longer occurs as long as some reachable copy is loaded.
 
-- The vendor directory is symlinked (common in monorepos and some Docker setups).
-- The WordPress plugins path differs between local and staging/production
-  (e.g. different mount points, Bedrock-style layouts).
-- The library is nested more than one level inside a non-standard directory
-  structure.
+If **no** copy can resolve a URL and none passes an explicit `plugin_url`,
+HyperFields never initializes, so its admin/field asset handles are never
+registered and `wp_add_inline_style('hyperpress-admin', ...)` silently no-ops.
+That is the fail-closed signal that the library is loaded from a location HTTP
+cannot reach.
 
-When auto-detection fails, `Config::$pluginUrl` is set to an empty string.
-`TemplateLoader::enqueueAssets()` checks for this and returns early, so the
-`hyperpress-admin` stylesheet handle is never registered. Any subsequent call to
-`wp_add_inline_style('hyperpress-admin', ...)` (e.g. inside
-`ExportImportUI::enqueueDiffAssets()`) silently no-ops because WordPress
-requires the handle to be registered before inline styles can be attached to it.
-The result is a page with no layout CSS — a bug that is easy to miss locally but
-reliably breaks on remote environments.
-
-**Always pass explicit `plugin_file` and `plugin_url` args.** Auto-detection
-exists only as a convenience for simple, standalone-plugin setups and should not
-be relied upon in vendored contexts.
+Pass explicit `plugin_file` and `plugin_url` args when you want to pin a
+specific copy as the winner regardless of load order, or when the library
+lives in a non-standard location whose URL the resolver cannot infer (the
+explicit `plugin_url` overrides the deferral and forces the copy to claim the
+identity).
 
 ## Examples
 

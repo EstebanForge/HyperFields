@@ -12,6 +12,22 @@ HyperFields is a decoupled WordPress library that provides a comprehensive custo
 composer require estebanforge/hyperfields
 ```
 
+### Loading inside a host plugin
+
+HyperFields self-initializes via its `bootstrap.php` (a Composer
+`autoload.files` entry) behind a first-to-boot guard, so loading the host
+plugin's own autoloader is all that is required:
+
+```php
+// my-plugin.php
+require_once plugin_dir_path(__FILE__) . 'vendor/autoload.php';
+```
+
+To pin a specific copy or override URL detection, call
+`LibraryBootstrap::init()` explicitly with `plugin_file` and `plugin_url`. See
+[docs/library-bootstrap.md](docs/library-bootstrap.md) for the full guide
+(standard flat-vendor, `plugins_loaded` class pattern, and monorepo layouts).
+
 ### Bedrock / Composer-managed WordPress sites
 
 When this library is installed **transitively** into a Bedrock-style project, Composer places it in the project **root `vendor/`** (outside `wp-content/`), because the package is `type: library` and Bedrock's `installer-paths` only route `wordpress-plugin` / `wordpress-muplugin` / `wordpress-theme` types. That root-vendor copy is not under any web-accessible WordPress content root, so its admin/field assets cannot be served over HTTP, and a `files`-autoloaded `bootstrap.php` running from there would claim the library identity with an empty asset URL (`HyperFields\LibraryBootstrap::resolveContentUrl()` returns `''` for paths under no content root).
