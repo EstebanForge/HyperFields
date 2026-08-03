@@ -30,29 +30,15 @@ final class LibraryBootstrap
         if (defined(__NAMESPACE__ . '\LOADED')) {
             return;
         }
-        $base_dir = isset($args['base_dir']) ? (string) $args['base_dir'] : trailingslashit(dirname(__DIR__));
-        $plugin_file = isset($args['plugin_file']) ? (string) $args['plugin_file'] : $base_dir . 'bootstrap.php';
-        $plugin_url = isset($args['plugin_url']) ? (string) $args['plugin_url'] : self::resolve_plugin_url($base_dir, $plugin_file);
-
-        // Defer when this copy is not under a web-reachable WP content root
-        // and the caller supplied no explicit URL. Defining the
-        // namespace-scoped LOADED identity here would lock out a web-reachable
-        // copy (e.g. one bundled inside a plugin under wp-content) and leave
-        // Config::\$pluginUrl empty, so its admin/field/editor assets would
-        // never enqueue. The common trigger is this library installed
-        // transitively into a Bedrock-style root composer vendor, outside the
-        // web document root; a web-reachable copy will run init() and claim
-        // the identity instead. An explicit plugin_url argument overrides the
-        // deferral so a consumer can force a copy the resolver cannot infer.
-        if (!isset($args['plugin_url']) && $plugin_url === '') {
-            return;
-        }
-
         define(__NAMESPACE__ . '\LOADED', __DIR__);
 
         if (Config::isInitialized()) {
             return;
         }
+
+        $base_dir = isset($args['base_dir']) ? (string) $args['base_dir'] : trailingslashit(dirname(__DIR__));
+        $plugin_file = isset($args['plugin_file']) ? (string) $args['plugin_file'] : $base_dir . 'bootstrap.php';
+        $plugin_url = isset($args['plugin_url']) ? (string) $args['plugin_url'] : self::resolve_plugin_url($base_dir, $plugin_file);
 
         Config::markInitialized();
         Config::$abspath = trailingslashit($base_dir);

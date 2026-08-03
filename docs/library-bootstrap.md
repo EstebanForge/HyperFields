@@ -46,7 +46,7 @@ a ready-to-use config.
 | `plugin_url` | `string` | Public URL to the HyperFields library root (trailing slash). |
 | `base_dir` | `string` | Absolute path to the HyperFields library root. Defaults to the directory containing `LibraryBootstrap.php`. |
 
-## URL resolution and the web-reachability deferral
+## URL resolution and graceful degradation
 
 When `plugin_url` is omitted, `init()` calls `resolve_plugin_url()`, which
 delegates to `HyperFields\LibraryBootstrap::resolveContentUrl()`. That resolver
@@ -57,26 +57,22 @@ directories), canonicalising both the query path and each root with
 the library's `base_dir` plus the relative remainder as the URL. It returns
 `''` when the library sits under none of them.
 
-Since the deferral landed, `init()` no longer claims the namespace identity
-when the URL cannot be resolved. When `resolve_plugin_url()` returns `''` and
-no explicit `plugin_url` was passed, `init()` returns **without** defining
-`HyperFields\LOADED` or writing `Config::$pluginUrl`, so a web-reachable copy
-(e.g. one bundled inside a plugin under `wp-content/`) is free to reach
-`init()` and claim the identity. The classic failure mode — a non-web-reachable
-copy locking out a reachable one with an empty asset URL, leaving admin/field
-assets unenqueued — no longer occurs as long as some reachable copy is loaded.
+`init()` always runs (it does not gate boot on web-reachability): it claims the
+namespace identity, loads the procedural API, and registers hooks regardless of
+whether the URL resolves. When the copy is not web-reachable,
+`Config::$pluginUrl` is simply empty and the asset layer degrades gracefully —
+`Assets.php` early-returns on an empty URL, so no admin/field CSS/JS is
+enqueued instead of emitting a 404ing URL. Server-side functionality (fields,
+options pages, export/import) is unaffected.
 
-If **no** copy can resolve a URL and none passes an explicit `plugin_url`,
-HyperFields never initializes, so its admin/field asset handles are never
-registered and `wp_add_inline_style('hyperpress-admin', ...)` silently no-ops.
-That is the fail-closed signal that the library is loaded from a location HTTP
-cannot reach.
+The `bootstrap.php` ABSPATH guard adds defense in depth: a root-vendor copy's
+`bootstrap.php` returns early when included before `ABSPATH` is defined
+(Bedrock loads the root autoloader in `wp-config`, before `ABSPATH` exists),
+so it does not schedule a competing `init()` ahead of a plugin-bundled copy.
 
 Pass explicit `plugin_file` and `plugin_url` args when you want to pin a
 specific copy as the winner regardless of load order, or when the library
-lives in a non-standard location whose URL the resolver cannot infer (the
-explicit `plugin_url` overrides the deferral and forces the copy to claim the
-identity).
+lives in a non-standard location whose URL the resolver cannot infer.
 
 ## Examples
 

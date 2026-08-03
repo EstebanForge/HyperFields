@@ -133,30 +133,6 @@ class LibraryBootstrapTest extends TestCase
 
     #[RunInSeparateProcess]
     #[PreserveGlobalState(false)]
-    public function testInitDefersWhenNotWebReachable(): void
-    {
-        // Simulate a Bedrock-style root composer vendor: outside every WP
-        // content root, with no explicit plugin_url override. init() must
-        // defer without claiming the namespace identity, so a web-reachable
-        // copy (e.g. bundled inside a plugin under wp-content) can still win.
-        $base_dir = sys_get_temp_dir() . '/bedrock-app/vendor/estebanforge/hyperfields/';
-
-        LibraryBootstrap::init([
-            'base_dir' => $base_dir,
-        ]);
-
-        $this->assertFalse(
-            Config::isInitialized(),
-            'init() must defer (not initialize Config) when the copy is not under a web-reachable WP content root.'
-        );
-        $this->assertFalse(
-            defined('HyperFields\\LOADED'),
-            'A non-web-reachable copy must not define the LOADED election guard; a web-reachable copy must be free to claim it.'
-        );
-    }
-
-    #[RunInSeparateProcess]
-    #[PreserveGlobalState(false)]
     public function testInitProceedsWithExplicitPluginUrlOverride(): void
     {
         // A consumer that knows its own URL can force a copy the resolver
