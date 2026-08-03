@@ -130,4 +130,47 @@ class LibraryBootstrapTest extends TestCase
             'init() must bail without initializing when the HyperFields\\LOADED election constant is already set.'
         );
     }
+
+    #[RunInSeparateProcess]
+    #[PreserveGlobalState(false)]
+    public function testInitDefersWhenNotWebReachable(): void
+    {
+        // Simulate a Bedrock-style root composer vendor: outside every WP
+        // content root, with no explicit plugin_url override. init() must
+        // defer without claiming the namespace identity, so a web-reachable
+        // copy (e.g. bundled inside a plugin under wp-content) can still win.
+        $base_dir = sys_get_temp_dir() . '/bedrock-app/vendor/estebanforge/hyperfields/';
+
+        LibraryBootstrap::init([
+            'base_dir' => $base_dir,
+        ]);
+
+        $this->assertFalse(
+            Config::isInitialized(),
+            'init() must defer (not initialize Config) when the copy is not under a web-reachable WP content root.'
+        );
+        $this->assertFalse(
+            defined('HyperFields\\LOADED'),
+            'A non-web-reachable copy must not define the LOADED election guard; a web-reachable copy must be free to claim it.'
+        );
+    }
+
+    #[RunInSeparateProcess]
+    #[PreserveGlobalState(false)]
+    public function testInitProceedsWithExplicitPluginUrlOverride(): void
+    {
+        // A consumer that knows its own URL can force a copy the resolver
+        // cannot infer. Even with a non-web-reachable base_dir, an explicit
+        // plugin_url must bypass the deferral and claim the identity.
+        $base_dir = sys_get_temp_dir() . '/bedrock-app/vendor/estebanforge/hyperfields/';
+        $override = 'http://example.com/wp-content/plugins/host-plugin/vendor/estebanforge/hyperfields/';
+
+        LibraryBootstrap::init([
+            'base_dir' => $base_dir,
+            'plugin_url' => $override,
+        ]);
+
+        $this->assertTrue(Config::isInitialized());
+        $this->assertSame($override, Config::$pluginUrl);
+    }
 }
