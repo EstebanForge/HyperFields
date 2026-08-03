@@ -97,9 +97,6 @@ class LibraryBootstrapTest extends TestCase
             WP_PLUGIN_URL . '/host-plugin/vendor/estebanforge/hyperfields/',
             Config::$pluginUrl
         );
-        // VERSION is now a class constant (single source of truth), independent
-        // of the version argument passed to init().
-        $this->assertSame('1.5.0', Config::VERSION);
         // HyperFields defines NO HYPERPRESS_* constants: those are owned by
         // HyperPress-Core (no cross-plugin shared state), which resolves both
         // HYPERPRESS_VERSION and HYPERPRESS_PLUGIN_URL from its own bootstrap.
@@ -135,9 +132,9 @@ class LibraryBootstrapTest extends TestCase
     #[PreserveGlobalState(false)]
     public function testInitProceedsWithExplicitPluginUrlOverride(): void
     {
-        // A consumer that knows its own URL can force a copy the resolver
-        // cannot infer. Even with a non-web-reachable base_dir, an explicit
-        // plugin_url must bypass the deferral and claim the identity.
+        // A consumer that knows its own URL can pin it: an explicit plugin_url
+        // is used verbatim as Config::$pluginUrl regardless of what the
+        // resolver would infer for base_dir.
         $base_dir = sys_get_temp_dir() . '/bedrock-app/vendor/estebanforge/hyperfields/';
         $override = 'http://example.com/wp-content/plugins/host-plugin/vendor/estebanforge/hyperfields/';
 
@@ -148,5 +145,23 @@ class LibraryBootstrapTest extends TestCase
 
         $this->assertTrue(Config::isInitialized());
         $this->assertSame($override, Config::$pluginUrl);
+    }
+
+    /**
+     * Config::VERSION must match composer.json. Guards the recurring drift
+     * where the constant is left at an old value during a manual bump
+     * (HyperBlocks hit this exact bug; the version-bump script scans src/
+     * only). Dynamic on purpose so it never goes stale on release.
+     */
+    public function testConfigVersionMatchesComposerJson(): void
+    {
+        $composer = json_decode(
+            (string) file_get_contents(dirname(__DIR__, 2) . '/composer.json'),
+            true
+        );
+
+        $this->assertIsArray($composer, 'HyperFields composer.json must be valid JSON.');
+        $this->assertArrayHasKey('version', $composer, 'HyperFields composer.json must declare a version.');
+        $this->assertSame($composer['version'], Config::VERSION);
     }
 }
