@@ -29,6 +29,13 @@ class PostMetaContainerTest extends \PHPUnit\Framework\TestCase
         Functions\when('esc_html')->returnArg();
         Functions\when('wp_verify_nonce')->justReturn(true);
         Functions\when('apply_filters')->returnArg();
+        Functions\when('wp_unslash')->alias(static function ($value) {
+            if (is_array($value)) {
+                return array_map('stripslashes', $value);
+            }
+
+            return stripslashes((string) $value);
+        });
 
         $this->container = new PostMetaContainer('test_container', 'Test Container');
     }
@@ -266,6 +273,32 @@ class PostMetaContainerTest extends \PHPUnit\Framework\TestCase
             ->with('hyperfields/post_meta_container_saved', 123, $this->container);
 
         $this->container->save();
+    }
+
+    public function testSaveUnslashesPostedValueBeforeSanitization(): void
+    {
+        $this->container->setPostId(123);
+
+        $field = Field::make('select', 'genre', 'Genre')
+            ->setOptions(['foo' => 'Foo', "O'Brien" => "O'Brien"]);
+        $this->container->addField($field);
+
+        // A magic-quotes-sashed valid selection whose key has an apostrophe.
+        // Without wp_unslash before sanitize, the strict allowlist compare fails
+        // and the selection is silently dropped to the first option.
+        $_POST['genre'] = "O\\'Brien";
+        $_POST['_hyperfields_metabox_nonce_test_container'] = 'test_nonce';
+
+        Functions\when('wp_verify_nonce')->justReturn(true);
+        $captured = null;
+        Functions\when('update_post_meta')->alias(function ($pid, $key, $val) use (&$captured) {
+            $captured = $val;
+        });
+        Functions\when('do_action')->justReturn();
+
+        $this->container->save();
+
+        $this->assertSame("O'Brien", $captured, 'captured update_post_meta value');
     }
 
     public function testRenderWithFields()

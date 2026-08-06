@@ -467,7 +467,7 @@ class Registry
             $field_name = $field->getName();
             if (isset($_POST[$field_name])) {
                 $post_field = PostField::forPost($post_id, $field->getType(), $field_name, $field->getLabel());
-                $post_field->setValue($_POST[$field_name]);
+                $post_field->setValue(wp_unslash($_POST[$field_name]));
             }
         }
     }
@@ -488,7 +488,7 @@ class Registry
             $field_name = $field->getName();
             if (isset($_POST[$field_name])) {
                 $user_field = UserField::forUser($user_id, $field->getType(), $field_name, $field->getLabel());
-                $user_field->setValue($_POST[$field_name]);
+                $user_field->setValue(wp_unslash($_POST[$field_name]));
             }
         }
     }
@@ -509,7 +509,7 @@ class Registry
             $field_name = $field->getName();
             if (isset($_POST[$field_name])) {
                 $term_field = TermField::forTerm($term_id, $field->getType(), $field_name, $field->getLabel());
-                $term_field->setValue($_POST[$field_name]);
+                $term_field->setValue(wp_unslash($_POST[$field_name]));
             }
         }
     }

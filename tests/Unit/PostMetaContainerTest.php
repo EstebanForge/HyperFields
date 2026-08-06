@@ -24,6 +24,13 @@ class PostMetaContainerTest extends \PHPUnit\Framework\TestCase
         // Stub WordPress functions
         Functions\stubTranslationFunctions();
         Functions\stubEscapeFunctions();
+        Functions\when('wp_unslash')->alias(static function ($value) {
+            if (is_array($value)) {
+                return array_map('stripslashes', $value);
+            }
+
+            return stripslashes((string) $value);
+        });
         Functions\when('wp_nonce_field')->justReturn('');
         Functions\when('sanitize_text_field')->returnArg();
         Functions\when('get_post_type_object')->justReturn((object) [

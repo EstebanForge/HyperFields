@@ -22,6 +22,13 @@ class RegistryTest extends \PHPUnit\Framework\TestCase
         // Stub WordPress functions
         Functions\stubTranslationFunctions();
         Functions\stubEscapeFunctions();
+        Functions\when('wp_unslash')->alias(static function ($value) {
+            if (is_array($value)) {
+                return array_map('stripslashes', $value);
+            }
+
+            return stripslashes((string) $value);
+        });
         Functions\when('wp_register_script')->justReturn('');
         Functions\when('wp_register_style')->justReturn('');
         Functions\when('wp_enqueue_script')->justReturn('');

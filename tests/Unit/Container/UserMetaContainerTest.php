@@ -24,6 +24,13 @@ class UserMetaContainerTest extends \PHPUnit\Framework\TestCase
         // Stub WordPress functions
         Functions\stubTranslationFunctions();
         Functions\stubEscapeFunctions();
+        Functions\when('wp_unslash')->alias(static function ($value) {
+            if (is_array($value)) {
+                return array_map('stripslashes', $value);
+            }
+
+            return stripslashes((string) $value);
+        });
         Functions\when('sanitize_text_field')->returnArg();
         Functions\when('esc_attr')->returnArg();
         Functions\when('esc_html')->returnArg();
