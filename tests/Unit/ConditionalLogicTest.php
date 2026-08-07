@@ -182,6 +182,21 @@ class ConditionalLogicTest extends \PHPUnit\Framework\TestCase
         $this->assertTrue($logic->evaluate($values));
     }
 
+    public function testMixedAndOrPrecedence()
+    {
+        $logic = ConditionalLogic::if('A')->equals(1)
+            ->and('B')->equals(2)
+            ->or('C')->equals(3);
+
+        // (A=1 AND B=2) OR C=3
+        // If A=1 but B=99 and C=99, (true AND false) OR false => false
+        $this->assertFalse($logic->evaluate(['A' => 1, 'B' => 99, 'C' => 99]));
+        // If A=1 and B=2, (true AND true) OR false => true
+        $this->assertTrue($logic->evaluate(['A' => 1, 'B' => 2, 'C' => 99]));
+        // If C=3, (false AND false) OR true => true
+        $this->assertTrue($logic->evaluate(['A' => 99, 'B' => 99, 'C' => 3]));
+    }
+
     public function testMissingFieldValues()
     {
         $logic = ConditionalLogic::if('nonexistent_field')->equals('value');

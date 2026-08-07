@@ -301,6 +301,29 @@ class PostMetaContainerTest extends \PHPUnit\Framework\TestCase
         $this->assertSame("O'Brien", $captured, 'captured update_post_meta value');
     }
 
+    public function testSaveMultiselectWithSentinelClearsValue(): void
+    {
+        $this->container->setPostId(123);
+
+        $field = Field::make('multiselect', 'test_multiselect', 'Test Multiselect')
+            ->setOptions(['opt1' => 'Option 1', 'opt2' => 'Option 2']);
+        $this->container->addField($field);
+
+        $_POST['test_multiselect'] = ['__hm_empty__'];
+        $_POST['_hyperfields_metabox_nonce_test_container'] = 'test_nonce';
+
+        Functions\when('wp_verify_nonce')->justReturn(true);
+        $captured = null;
+        Functions\when('update_post_meta')->alias(function ($pid, $key, $val) use (&$captured) {
+            $captured = $val;
+        });
+        Functions\when('do_action')->justReturn();
+
+        $this->container->save();
+
+        $this->assertSame([], $captured, 'multiselect cleared to empty array on sentinel submit');
+    }
+
     public function testRenderWithFields()
     {
         $this->container->setPostId(123);

@@ -242,6 +242,38 @@ class PostMetaContainerTest extends \PHPUnit\Framework\TestCase
         $this->assertTrue(true);
     }
 
+    #[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+    #[\PHPUnit\Framework\Attributes\PreserveGlobalState(false)]
+    public function testSaveMultiselectWithSentinelClearsValue()
+    {
+        $field = Field::make('multiselect', 'test_multiselect', 'Test Multiselect')
+            ->setOptions(['opt1' => 'Option 1', 'opt2' => 'Option 2']);
+        $this->container->addField($field);
+        $this->container->setPostId(123);
+
+        $_POST = [
+            'post_ID' => 123,
+            'test_multiselect' => ['__hm_empty__'],
+            '_hyperfields_metabox_nonce_test_container' => 'valid_nonce',
+        ];
+
+        Functions\when('wp_create_nonce')->justReturn('valid_nonce');
+        Functions\when('wp_verify_nonce')->justReturn(true);
+        Functions\when('get_post_type')->justReturn('post');
+        Functions\when('get_post_type_object')->justReturn((object) [
+            'cap' => (object) ['edit_post' => 'edit_posts'],
+        ]);
+        Functions\when('current_user_can')->justReturn(true);
+
+        $captured = null;
+        Functions\when('update_post_meta')->alias(function ($pid, $key, $val) use (&$captured) {
+            $captured = $val;
+        });
+
+        $this->container->save();
+        $this->assertSame([], $captured);
+    }
+
     // ...
 
     public function testAttachToSpecificPosts()

@@ -346,8 +346,10 @@ class FieldTest extends \PHPUnit\Framework\TestCase
         $this->assertEquals([], $field->sanitizeValue('not_array'));
 
         // Multiselect
-        $field = Field::make('multiselect', 'f', 'F');
+        $field = Field::make('multiselect', 'f', 'F')->setOptions(['a'=>'A', 'b'=>'B']);
         $this->assertEquals(['a', 'b'], $field->sanitizeValue(['a', 'b']));
+        $this->assertEquals(['a'], $field->sanitizeValue(['a', '__hm_empty__', 'invalid']));
+        $this->assertEquals([], $field->sanitizeValue(['__hm_empty__']));
         $this->assertEquals([], $field->sanitizeValue('not_array'));
 
         // Map

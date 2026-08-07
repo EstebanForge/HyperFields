@@ -35,14 +35,15 @@ $posts = get_posts([
     'post_status' => 'publish',
     'orderby' => 'title',
     'order' => 'ASC',
+    'no_found_rows' => true,
     'update_post_term_cache' => false,
     'update_post_meta_cache' => false,
 ]);
 
 // Guarantee already-stored selections always render, even when they sort
-// beyond the 200-post window. Without this, an associated post absent from
-// the <select> would be silently cleared on the next save: the browser
-// submits the empty default option for a single select with no match.
+// beyond the 200-post window or are non-published (draft/private/trash).
+// Without this, an associated post absent from the <select> would be silently
+// cleared on the next save when the browser submits the empty default option.
 $loaded_ids = array_map(static fn ($p) => (int) $p->ID, $posts);
 $missing_ids = array_values(array_diff($value_ids, $loaded_ids));
 if ($missing_ids !== []) {
@@ -50,7 +51,7 @@ if ($missing_ids !== []) {
         'post_type' => $post_type,
         'post__in' => $missing_ids,
         'posts_per_page' => count($missing_ids),
-        'post_status' => 'publish',
+        'post_status' => 'any',
         'orderby' => 'title',
         'order' => 'ASC',
         'no_found_rows' => true,
