@@ -450,7 +450,7 @@ class Registry
             return;
         }
 
-        if (!wp_verify_nonce($_POST['hyperpress_post_fields_nonce'], 'hyperpress_post_fields')) {
+        if (!wp_verify_nonce(sanitize_key(wp_unslash($_POST['hyperpress_post_fields_nonce'])), 'hyperpress_post_fields')) {
             return;
         }
 
@@ -483,6 +483,10 @@ class Registry
             return;
         }
 
+        if (!isset($_POST['_wpnonce'])) {
+            return;
+        }
+
         $user_fields = $this->getFieldsByContext('user');
         foreach ($user_fields as $field) {
             $field_name = $field->getName();
@@ -501,6 +505,10 @@ class Registry
     public function saveTermFields(int $term_id): void
     {
         if (!current_user_can('manage_categories')) {
+            return;
+        }
+
+        if (!isset($_POST['_wpnonce'])) {
             return;
         }
 

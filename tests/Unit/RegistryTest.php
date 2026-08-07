@@ -29,6 +29,7 @@ class RegistryTest extends \PHPUnit\Framework\TestCase
 
             return stripslashes((string) $value);
         });
+        Functions\when('sanitize_key')->returnArg();
         Functions\when('wp_register_script')->justReturn('');
         Functions\when('wp_register_style')->justReturn('');
         Functions\when('wp_enqueue_script')->justReturn('');
@@ -308,6 +309,7 @@ class RegistryTest extends \PHPUnit\Framework\TestCase
         $registry->registerField('user', $field);
 
         $_POST['user_field'] = 'user_value';
+        $_POST['_wpnonce'] = 'admin_nonce';
 
         Functions\expect('current_user_can')
             ->with('edit_user', 456)
@@ -330,6 +332,7 @@ class RegistryTest extends \PHPUnit\Framework\TestCase
         $registry->registerField('term', $field);
 
         $_POST['term_field'] = 'term_value';
+        $_POST['_wpnonce'] = 'admin_nonce';
 
         Functions\expect('current_user_can')
             ->with('manage_categories')
@@ -339,6 +342,46 @@ class RegistryTest extends \PHPUnit\Framework\TestCase
             ->once()
             ->with(789, 'term_field', 'term_value')
             ->andReturn(true);
+
+        $registry->saveTermFields(789);
+
+        unset($_POST['term_field']);
+    }
+
+    public function testSaveUserFieldsBailsWithoutFormNonce(): void
+    {
+        $registry = Registry::getInstance();
+        $field = Field::make('text', 'user_field', 'User Field');
+        $registry->registerField('user', $field);
+
+        $_POST['user_field'] = 'user_value';
+        unset($_POST['_wpnonce']);
+
+        Functions\expect('current_user_can')
+            ->with('edit_user', 456)
+            ->andReturn(true);
+
+        Functions\expect('update_user_meta')->never();
+
+        $registry->saveUserFields(456);
+
+        unset($_POST['user_field']);
+    }
+
+    public function testSaveTermFieldsBailsWithoutFormNonce(): void
+    {
+        $registry = Registry::getInstance();
+        $field = Field::make('text', 'term_field', 'Term Field');
+        $registry->registerField('term', $field);
+
+        $_POST['term_field'] = 'term_value';
+        unset($_POST['_wpnonce']);
+
+        Functions\expect('current_user_can')
+            ->with('manage_categories')
+            ->andReturn(true);
+
+        Functions\expect('update_term_meta')->never();
 
         $registry->saveTermFields(789);
 
