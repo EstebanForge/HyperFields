@@ -483,7 +483,7 @@ class Registry
             return;
         }
 
-        if (!isset($_POST['_wpnonce'])) {
+        if (!isset($_POST['_wpnonce']) || !wp_verify_nonce(sanitize_key(wp_unslash($_POST['_wpnonce'])), 'update-user_' . $user_id)) {
             return;
         }
 

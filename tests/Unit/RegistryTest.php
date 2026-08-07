@@ -320,6 +320,8 @@ class RegistryTest extends \PHPUnit\Framework\TestCase
             ->with(456, 'user_field', 'user_value')
             ->andReturn(true);
 
+        Functions\when('wp_verify_nonce')->justReturn(true);
+
         $registry->saveUserFields(456);
 
         unset($_POST['user_field']);
