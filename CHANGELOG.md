@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.5.2] - 2026-08-09
+
+### Security
+- **Save handlers now require a verified form-origin nonce.** Legacy user and term meta save paths that accepted a weaker check now verify the nonce against the form origin, rejecting forged save requests.
+- **Posted values are unslashed before validation.** Save handlers now unslash incoming data so sanitization sees the real values, preventing slashed input from slipping past content and length checks.
+- **Multiselect fields can be cleared.** A hidden sentinel now lets a multiselect submit an empty selection so a stored value is actually removed, and submitted values are filtered against the allowed option keys.
+- **Conditional logic evaluates relation groups correctly.** `AND`/`OR` relations are compiled into boolean groups instead of being flattened, and the `IN`/`NOT IN` operators handle array-valued fields via set intersection.
+
+### Changed
+- **Association field queries are bounded.** The primary lookup skips row counting, and the fallback now considers all post statuses so a draft or private association is no longer silently dropped on save.
+- Path normalization in `resolveContentUrl()` prefers the native `wp_normalize_path()`.
+
+### Removed
+- **Legacy content export/import.** The deprecated `ContentExportImport` and `ContentTransferAdapter` classes and their helpers were removed in favor of the transfer workflow.
+
 ## [1.5.1] - 2026-08-03
 
 ### Changed
