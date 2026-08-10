@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.5.3] - 2026-08-10
+
+### Added
+- **`LibraryBootstrap::resolveAssetBaseUrl()` — the single source of truth for resolving the library's own asset base URL.** Consolidates three previously duplicated resolution shapes that had drifted apart across seven enqueue sites. Resolution order:
+  1. `Config::$pluginUrl` — the normal elected path, set by `LibraryBootstrap::init()`.
+  2. `HYPERPRESS_PLUGIN_URL` — HyperPress-Core owns this constant and resolves it from its own base directory; respected when HyperPress is the active host.
+  3. `LibraryBootstrap::resolveContentUrl(dirname(__DIR__))` — defense-in-depth fallback for when no bootstrap completed (e.g. `bootstrap.php` was pulled in by Composer's `autoload.files` before `add_action()` existed, so its `after_setup_theme` scheduling silently no-op'd — common when an early drop-in or mu-plugin triggers the host autoloader). Resolves from THIS copy's own root, so the assets that match the loaded classes are the ones that enqueue. Returns `''` for non-web-accessible locations (e.g. a Bedrock root `vendor/` outside the document root); callers bail then.
+  - `Config` is **not** mutated: the cross-copy election/bootstrap state stays untouched, so HyperPress-Core's own bootstrap still wins when present. Mirrors the fallback HyperBlocks' editor-asset enqueue already uses against the same gap.
+
+### Changed
+- **Every asset-enqueue site now routes through `resolveAssetBaseUrl()` instead of inlining its own resolution.** Removes the three divergent inline shapes:
+  - `Config::$pluginUrl !== '' ? Config::$pluginUrl : (defined('HYPERPRESS_PLUGIN_URL') ? HYPERPRESS_PLUGIN_URL : '')` — previously in `TemplateLoader::enqueueAssets()`, `TemplateLoader::enqueueDeferredAssets()`, and `Admin\ExportImportUI::enqueuePageAssets()`.
+  - The full `Config::$pluginUrl` / `plugins_url('', ...)` fallback block — previously duplicated verbatim in `AdminPage`, `OptionsPage` (settings assets), and `OptionsPage` (React app enqueue).
+  - The bare `Config::$pluginUrl === ''` early-return in `Assets::enqueueScripts()`, which had no fallback at all.
+  All seven sites now share one method, so the new `resolveContentUrl()` fallback tier applies uniformly and the resolution contract can no longer drift between callers.
+
 ## [1.5.2] - 2026-08-09
 
 ### Security

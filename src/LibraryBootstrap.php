@@ -182,6 +182,47 @@ final class LibraryBootstrap
     }
 
     /**
+     * Resolve the trailingslashed base URL for the library's own assets.
+     *
+     * Single source of truth for asset enqueues (TemplateLoader,
+     * Assets::enqueueScripts, and future callers). Resolution order:
+     *
+     *   1. Config::$pluginUrl    — set by self::init(); the normal elected path.
+     *   2. HYPERPRESS_PLUGIN_URL — HyperPress-Core owns this constant and
+     *      resolves it from its own base directory; respected when HyperPress
+     *      is the active host.
+     *   3. resolveContentUrl(dirname(__DIR__)) — defense-in-depth fallback for
+     *      when no bootstrap completed (e.g. bootstrap.php was pulled in by
+     *      Composer's files-autoload before add_action() existed, so its
+     *      after_setup_theme scheduling silently no-op'd — common when an
+     *      early drop-in or mu-plugin triggers a composer autoloader).
+     *      Resolves from THIS copy's own root, so the assets that match the
+     *      loaded classes are the ones that enqueue.
+     *
+     * Config is NOT mutated: the cross-copy election/bootstrap state stays
+     * untouched, so HyperPress-Core's own bootstrap still wins when present.
+     * Returns '' for non-web-accessible locations (e.g. a Bedrock root vendor
+     * outside the document root); callers bail then. Mirrors the fallback
+     * HyperBlocks' editor-asset enqueue already uses against the same gap.
+     *
+     * @return string Trailingslashed base URL, or '' when not resolvable.
+     */
+    public static function resolveAssetBaseUrl(): string
+    {
+        if (Config::$pluginUrl !== '') {
+            return Config::$pluginUrl;
+        }
+
+        if (defined('HYPERPRESS_PLUGIN_URL') && HYPERPRESS_PLUGIN_URL !== '') {
+            return HYPERPRESS_PLUGIN_URL;
+        }
+
+        $resolved = self::resolveContentUrl(dirname(__DIR__));
+
+        return $resolved !== '' ? trailingslashit($resolved) : '';
+    }
+
+    /**
      * Resolve plugin URL for library usage.
      *
      * @param string $base_dir HyperFields base directory.

@@ -18,13 +18,28 @@ It provides:
 composer require estebanforge/hyperfields
 ```
 
-Load your project Composer autoloader:
+Load your project Composer autoloader, then call the library bootstrap:
 
 ```php
 require_once __DIR__ . '/vendor/autoload.php';
+
+if (class_exists('\HyperFields\LibraryBootstrap')) {
+    \HyperFields\LibraryBootstrap::init([
+        'plugin_file' => __FILE__,
+        'plugin_url'  => plugin_dir_url(__FILE__) . 'vendor/estebanforge/hyperfields/',
+    ]);
+}
 ```
 
-HyperFields bootstrap is registered via Composer `autoload.files`.
+HyperFields ships a `bootstrap.php` (registered under Composer `autoload.files`)
+that *attempts* to self-initialize at `after_setup_theme`. That auto-bootstrap
+is best-effort: it can silently no-op when the autoloader is pulled in before
+`add_action()` exists (for example, by an early drop-in or must-use plugin),
+leaving `Config` and the supporting subsystems uninitialized. Calling
+`LibraryBootstrap::init()` explicitly after your autoloader is the supported,
+deterministic contract. It is idempotent and safe under the cross-copy election
+guard. See [`docs/library-bootstrap.md`](docs/library-bootstrap.md) for the
+full guide, arguments, and failure modes.
 
 ## Basic usage
 

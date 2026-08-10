@@ -40,6 +40,7 @@ class OptionsPageTest extends \PHPUnit\Framework\TestCase
         Functions\when('wp_hash')->justReturn('hash123');
         Functions\when('settings_fields')->justReturn('');
         Functions\when('do_settings_fields')->justReturn('');
+        Functions\when('wp_add_inline_style')->justReturn();
 
         // Mock submit_button to echo output using alias
 
