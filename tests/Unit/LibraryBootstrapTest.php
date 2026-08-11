@@ -164,4 +164,46 @@ class LibraryBootstrapTest extends TestCase
         $this->assertArrayHasKey('version', $composer, 'HyperFields composer.json must declare a version.');
         $this->assertSame($composer['version'], Config::VERSION);
     }
+
+    /**
+     * Layer 2: ensureInitialized() must bring the library up (run init()) when a
+     * consumer touched an early-reachable facade before after_setup_theme.
+     */
+    #[RunInSeparateProcess]
+    #[PreserveGlobalState(false)]
+    public function testEnsureInitializedBringsUpLibraryWhenNotInitialized()
+    {
+        $this->assertFalse(
+            Config::isInitialized(),
+            'Config must start uninitialized in an isolated process; check the autoload chain.'
+        );
+
+        LibraryBootstrap::ensureInitialized();
+
+        $this->assertTrue(
+            Config::isInitialized(),
+            'ensureInitialized() must run init() when the library is not yet bootstrapped.'
+        );
+    }
+
+    /**
+     * Layer 2: ensureInitialized() is a no-op when Config is already
+     * initialized; it must not re-run init() (which would re-register hooks).
+     */
+    #[RunInSeparateProcess]
+    #[PreserveGlobalState(false)]
+    public function testEnsureInitializedIsNoOpWhenAlreadyInitialized()
+    {
+        // Pre-mark Config so ensureInitialized() bails without re-running init().
+        Config::markInitialized();
+
+        LibraryBootstrap::ensureInitialized();
+
+        // init() defines HyperFields\LOADED; a no-op ensureInitialized must not.
+        $this->assertFalse(
+            defined('HyperFields\\LOADED'),
+            'ensureInitialized() must not re-run init() when Config is already initialized.'
+        );
+        $this->assertTrue(Config::isInitialized());
+    }
 }

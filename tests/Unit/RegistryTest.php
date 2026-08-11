@@ -281,6 +281,39 @@ class RegistryTest extends \PHPUnit\Framework\TestCase
         $this->assertTrue($action_triggered);
     }
 
+    /**
+     * Layer 3 Rule B: when the init hook already fired (late bring-up, e.g. via
+     * a Layer 2 ensureInitialized() fallback after init), Registry::init()
+     * must run registerAll synchronously instead of scheduling it onto a dead
+     * hook. Regression guard: without Rule B a late init leaves field and
+     * options-page registration silent.
+     */
+    public function testInitRunsRegisterAllSynchronouslyWhenInitHookAlreadyFired()
+    {
+        $registry = Registry::getInstance();
+
+        // Late bring-up: the init hook already fired.
+        Functions\when('did_action')->justReturn(1);
+
+        $action_triggered = false;
+        Functions\expect('do_action')
+            ->once()
+            ->with('hyperfields/register')
+            ->andReturnUsing(function () use (&$action_triggered) {
+                $action_triggered = true;
+            });
+
+        // Non-admin so registerAdminHooks() short-circuits.
+        Functions\when('is_admin')->justReturn(false);
+
+        $registry->init();
+
+        $this->assertTrue(
+            $action_triggered,
+            'Registry::init() must run registerAll synchronously when did_action("init") > 0 (Layer 3 Rule B).'
+        );
+    }
+
     public function testSavePostFields()
     {
         $registry = Registry::getInstance();
