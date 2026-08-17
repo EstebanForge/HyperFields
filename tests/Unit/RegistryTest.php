@@ -373,6 +373,8 @@ class RegistryTest extends \PHPUnit\Framework\TestCase
             ->with('manage_categories')
             ->andReturn(true);
 
+        Functions\when('wp_verify_nonce')->justReturn(true);
+
         Functions\expect('update_term_meta')
             ->once()
             ->with(789, 'term_field', 'term_value')
@@ -381,6 +383,107 @@ class RegistryTest extends \PHPUnit\Framework\TestCase
         $registry->saveTermFields(789);
 
         unset($_POST['term_field']);
+    }
+
+    /**
+     * L1 regression: a present but INVALID nonce must refuse the save.
+     * Previously only nonce presence was checked, so any POST carrying a
+     * garbage _wpnonce wrote term meta unverified.
+     */
+    public function testSaveTermFieldsBailsWithInvalidNonce(): void
+    {
+        $registry = Registry::getInstance();
+        $field = Field::make('text', 'term_field', 'Term Field');
+        $registry->registerField('term', $field);
+
+        $_POST['term_field'] = 'term_value';
+        $_POST['_wpnonce'] = 'garbage_nonce';
+
+        Functions\expect('current_user_can')
+            ->with('manage_categories')
+            ->andReturn(true);
+
+        Functions\when('wp_verify_nonce')->justReturn(false);
+
+        Functions\expect('update_term_meta')->never();
+
+        $registry->saveTermFields(789, 0, 'category');
+
+        unset($_POST['term_field'], $_POST['_wpnonce']);
+    }
+
+    /**
+     * The verified nonces are the ones core's edit-tags.php actually posts:
+     * _wpnonce / update-tag_{term_id} (edit form) and _wpnonce_add-tag /
+     * literal 'add-tag' (create form). Both paths in ONE test: Brain Monkey
+     * binds a function mock once per process for closure-backed returns, so
+     * a second test re-mocking wp_verify_nonce would silently keep the first
+     * closure.
+     */
+    public function testSaveTermFieldsVerifiesCoreScreenNonceActions(): void
+    {
+        $registry = Registry::getInstance();
+        $field = Field::make('text', 'term_field', 'Term Field');
+        $registry->registerField('term', $field);
+
+        $_POST['term_field'] = 'term_value';
+
+        Functions\expect('current_user_can')
+            ->with('manage_categories')
+            ->andReturn(true);
+
+        $captured = [];
+        $mode = 'edit';
+        // when()->alias() re-binds across tests in this suite (expect() does
+        // not re-bind after an earlier when() in the same process).
+        Functions\when('wp_verify_nonce')->alias(function ($nonce, $action) use (&$captured, &$mode) {
+            $captured[] = [$nonce, $action];
+
+            return $mode === 'edit'
+                ? ($nonce === 'editnonce' && $action === 'update-tag_789')
+                : ($nonce === 'creatonce' && $action === 'add-tag');
+        });
+
+        $meta_writes = [];
+        Functions\when('update_term_meta')->alias(function (...$args) use (&$meta_writes) {
+            $meta_writes[] = $args;
+
+            return true;
+        });
+
+        // Edit path: _wpnonce verified against update-tag_{term_id}.
+        $_POST['_wpnonce'] = 'editnonce';
+        $registry->saveTermFields(789, 0, 'category');
+        $this->assertSame([['editnonce', 'update-tag_789']], $captured, 'edit screen verifies _wpnonce against core update-tag_{term_id} action');
+        $this->assertCount(1, $meta_writes, 'edit path persists the field');
+        $this->assertSame([789, 'term_field', 'term_value'], $meta_writes[0]);
+
+        // Create path: _wpnonce_add-tag verified against the literal 'add-tag'.
+        $captured = [];
+        $mode = 'create';
+        unset($_POST['_wpnonce']);
+        $_POST['_wpnonce_add-tag'] = 'creatonce';
+        $registry->saveTermFields(789, 0, 'category');
+        $this->assertSame([['creatonce', 'add-tag']], $captured, 'create screen verifies _wpnonce_add-tag against core literal add-tag action');
+        $this->assertCount(2, $meta_writes, 'create path persists the field');
+
+        unset($_POST['term_field'], $_POST['_wpnonce_add-tag']);
+    }
+
+    /**
+     * WIRING: created_term/edited_term must be registered with accepted_args
+     * 3, or WP forwards only the term ID and the hook signature args never
+     * reach the callback (the 1.5.7 first cut shipped exactly that bug).
+     */
+    public function testSaveTermFieldsHooksAcceptThreeArgs(): void
+    {
+        $registry = Registry::getInstance();
+        $expected = [[$registry, 'saveTermFields'], 10, 3];
+        Functions\expect('add_action')->once()->with('created_term', ...$expected);
+        Functions\expect('add_action')->once()->with('edited_term', ...$expected);
+        Functions\when('is_admin')->justReturn(true);
+
+        $registry->registerAll();
     }
 
     public function testSaveUserFieldsBailsWithoutFormNonce(): void

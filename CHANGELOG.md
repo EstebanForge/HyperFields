@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.7] - 2026-08-17
+
+### Security
+- **`Registry::saveTermFields()` now verifies the core edit-tags.php screen nonces instead of only checking that `_wpnonce` exists.** Previously the guard was `isset($_POST['_wpnonce'])` — a presence check. The save now verifies what core actually posts: `_wpnonce` against `update-tag_{term_id}` (edit form) and `_wpnonce_add-tag` against the literal `add-tag` action (create form); a nonce that is present but invalid refuses the save. The hooks are also registered with `accepted_args = 3` so the full hook signature reaches the callback. Addresses audit finding L1; capability handling (L2, the hardcoded `manage_categories` check) is unchanged.
+
+### Fixed
+- **Term fields now save on term creation.** A pre-existing bug (not a regression of the nonce change): the create form posts its nonce as `_wpnonce_add-tag`, which the old presence check on `_wpnonce` never saw, so term custom fields were silently never saved when a term was created — only on later edits. The corrected create-screen verification restores that path. Quick Edit (inline term editing, `taxinlineeditnonce`) remains unhandled and is documented as such.
 ## [1.5.6] - 2026-08-17
 
 ### Security
