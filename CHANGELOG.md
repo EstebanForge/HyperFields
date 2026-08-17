@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.5.5] - 2026-08-17
+
+### Security
+- **Data Tools admin page no longer loads third-party scripts from CDNs.** The import diff preview loaded `diff`, `diff2html` (jsDelivr) and a highlight.js theme (cdnjs) at runtime with no integrity check, and the export tab loaded `@textea/json-viewer` the same way. A compromised CDN or a network-level attacker could execute arbitrary JavaScript in the wp-admin origin with the admin session, reading the embedded `current`/`incoming` option snapshots or silently altering the pending import. All four libraries are now bundled under `assets/{js,css}/vendor/` and enqueued server-side via `wp_enqueue_script`/`wp_enqueue_style`. The runtime CDN loaders (`hfDiffLoadScript`, `hfDiffLoadCss`, and the JsonViewer fallback) were removed. When the library is not web-reachable (Bedrock root-vendor installs), the diff preview degrades to a plain side-by-side JSON view and the export viewer to an escaped `<pre>` block; both are built with `textContent`, never `innerHTML`.
+
 ## [1.5.4] - 2026-08-11
 
 ### Fixed
