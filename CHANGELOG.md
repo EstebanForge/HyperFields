@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.5.6] - 2026-08-17
+
+### Security
+- **Log filename hash upgraded, based on the WooCommerce 8.9+ algorithm** (`Logging\FileV2\File::generate_hash`, hashing step). The log filename suffix is now `hash_hmac('md5', $file_id, AUTH_SALT)` over the file id (`source-Y-m-d`) instead of `wp_hash($source)` (which hashed only the source). Hashing the file id rotates the unguessable URL suffix with each daily file, and the explicit `AUTH_SALT` key (fallback literal for writes that happen before WordPress loads salts; no current caller runs that early) documents the trust base. Storage stays in the shared stack log directory `uploads/hyperpress-logs/` (also used by HyperPress-Core, by design), with daily rotation, `.htaccess`/`index.html` protection, and append semantics unchanged. Old-named files stop receiving writes naturally on the next daily rotation. Addresses audit finding M2 residual risk; regression tests pin the filename format for both the salt and fallback keys. Date grouping uses server-local `date()`, not WC's `gmdate()`; rotation timing has no security significance.
+
 ## [1.5.5] - 2026-08-17
 
 ### Security

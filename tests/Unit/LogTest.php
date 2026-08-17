@@ -34,9 +34,6 @@ class LogTest extends \PHPUnit\Framework\TestCase
         });
 
         Functions\when('sanitize_file_name')->returnArg();
-        Functions\when('wp_hash')->alias(function ($data) {
-            return md5($data);
-        });
 
         // Reset static properties via reflection
         $reflection = new \ReflectionClass(Log::class);
@@ -84,6 +81,56 @@ class LogTest extends \PHPUnit\Framework\TestCase
         $result = Log::log(Log::LOG_LEVEL_CRITICAL, 'Critical test message', ['source' => 'test-source']);
 
         $this->assertTrue($result);
+    }
+
+    /**
+     * Filename hash follows the WooCommerce 8.9+ algorithm: HMAC-MD5 over
+     * the file id (source + date), keyed by AUTH_SALT (fallback constant
+     * when salts are not loaded yet). Pins both the name shape and the
+     * exact hash so the log URL stays unguessable on web-served uploads.
+     */
+    public function testFilenameUsesAuthSaltHmacOverFileId()
+    {
+        Log::log(Log::LOG_LEVEL_ERROR, 'hash pin', ['source' => 'pin-source']);
+
+        $expected_date = date('Y-m-d');
+        $file_id = "pin-source-{$expected_date}";
+        $key = defined('AUTH_SALT') ? (string) AUTH_SALT : 'hyperpress-logs';
+        $expected = "{$file_id}-" . hash_hmac('md5', $file_id, $key) . '.log';
+
+        $reflection = new \ReflectionClass(Log::class);
+        $logBaseDir = $reflection->getProperty('logBaseDir');
+        $base = (string) $logBaseDir->getValue();
+
+        $this->assertFileExists($base . $expected);
+        // No legacy-named file (bare-source wp_hash) may be written anymore.
+        $this->assertFileDoesNotExist($base . "pin-source-{$expected_date}-" . md5('pin-source') . '.log');
+    }
+
+    /**
+     * When AUTH_SALT is defined (every real WordPress install), the salt —
+     * not the public fallback literal — keys the HMAC. Guards against a
+     * refactor silently dropping the salt branch.
+     */
+    public function testFilenameUsesAuthSaltWhenDefined()
+    {
+        if (defined('AUTH_SALT')) {
+            $this->markTestSkipped('AUTH_SALT already defined by another test in this process.');
+        }
+        define('AUTH_SALT', 'test-salt-value');
+
+        Log::log(Log::LOG_LEVEL_ERROR, 'salt pin', ['source' => 'salt-source']);
+
+        $expected_date = date('Y-m-d');
+        $file_id = "salt-source-{$expected_date}";
+        $expected = "{$file_id}-" . hash_hmac('md5', $file_id, 'test-salt-value') . '.log';
+
+        $reflection = new \ReflectionClass(Log::class);
+        $base = (string) $reflection->getProperty('logBaseDir')->getValue();
+
+        $this->assertFileExists($base . $expected);
+        // And the fallback-keyed name must NOT exist for this source.
+        $this->assertFileDoesNotExist($base . "{$file_id}-" . hash_hmac('md5', $file_id, 'hyperpress-logs') . '.log');
     }
 
     public function testLogErrorMessage()
