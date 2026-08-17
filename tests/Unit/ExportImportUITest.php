@@ -24,6 +24,7 @@ class ExportImportUITest extends \PHPUnit\Framework\TestCase
             echo '<input type="hidden" name="' . $name . '" value="test_nonce">';
         });
         Functions\when('wp_verify_nonce')->justReturn(true);
+        Functions\when('current_user_can')->justReturn(true);
         Functions\when('sanitize_text_field')->returnArg();
         Functions\when('sanitize_key')->returnArg();
         Functions\when('wp_unslash')->returnArg();
@@ -512,5 +513,29 @@ class ExportImportUITest extends \PHPUnit\Framework\TestCase
         ExportImportUI::enqueuePageAssets();
 
         $this->assertTrue($inlineStyleEnqueued, 'diff CSS should be added via wp_add_inline_style');
+    }
+
+    /**
+     * L4: render() must fail closed when the caller lacks the configured
+     * capability, even with valid nonces — the submenu gate only protects
+     * registerPage() usage, not manual embedding.
+     */
+    public function testRenderRefusesWithoutCapability(): void
+    {
+        Functions\when('current_user_can')->justReturn(false);
+
+        $_POST['hf_export_submit'] = '1';
+        $_POST['hf_export_nonce'] = 'valid';
+        $_POST['hf_export_options'] = ['my_option'];
+
+        $exported = false;
+        Functions\when('set_transient')->justReturn(true);
+
+        $html = ExportImportUI::render(options: ['my_option' => 'My Option']);
+
+        $this->assertStringContainsString('do not have permission', $html);
+        $this->assertStringNotContainsString('hf-export-form', $html, 'no export UI for users without the capability');
+
+        unset($_POST['hf_export_submit'], $_POST['hf_export_nonce'], $_POST['hf_export_options']);
     }
 }

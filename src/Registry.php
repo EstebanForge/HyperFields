@@ -322,6 +322,11 @@ class Registry
         }
 
         add_action('add_meta_boxes', [$this, 'registerPostMetaBoxes']);
+        // L6: the Registry metabox rendered its nonce + inputs but the save
+        // handler was never hooked, making the metabox display-only. Wired
+        // now; safe alongside PostMetaContainer because each path requires
+        // its own nonce.
+        add_action('save_post', [$this, 'savePostFields']);
         add_action('show_user_profile', [$this, 'renderUserFields']);
         add_action('edit_user_profile', [$this, 'renderUserFields']);
         add_action('personal_options_update', [$this, 'saveUserFields']);
@@ -530,7 +535,10 @@ class Registry
      */
     public function saveTermFields(int $term_id, int $tt_id = 0, string $taxonomy = ''): void
     {
-        if (!current_user_can('manage_categories')) {
+        // Per-taxonomy meta cap (aligns with TermMetaContainer): custom
+        // taxonomies map their own edit_terms capability, which
+        // manage_categories neither guarantees nor is guaranteed by.
+        if (!current_user_can('edit_term', $term_id)) {
             return;
         }
 

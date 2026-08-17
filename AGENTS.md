@@ -288,6 +288,7 @@ if (!$result['success']) {
 - Before overwriting, `importOptions` stores a 1-hour transient backup; key returned in `backup_keys`.
 - `restoreBackup` deletes the transient after a successful or no-op restore.
 - `JSON_HEX_TAG | JSON_HEX_AMP` flags prevent XSS when the diff preview embeds JSON in `<script>` tags.
+- Imported values can be sanitized through registered fields via the `hyperfields/import/sanitize_fields` filter: return a map of `field name => HyperFields\Field` for the given option name, and every matching top-level key of the imported value runs through `Field::sanitizeValue()` before storage. Default (no filter) keeps values unchanged (since 1.5.5).
 - The Data Tools diff preview and JSON viewer use libraries bundled under `assets/{js,css}/vendor/` (diff, diff2html, highlight.js theme, @textea/json-viewer), enqueued server-side. No CDN scripts load in the admin origin. When the library is not web-reachable the UI degrades to safe text-based fallbacks instead of fetching anything remotely (since 1.5.5).
 
 ## Important Notes

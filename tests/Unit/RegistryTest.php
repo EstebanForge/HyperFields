@@ -370,7 +370,7 @@ class RegistryTest extends \PHPUnit\Framework\TestCase
         $_POST['_wpnonce'] = 'admin_nonce';
 
         Functions\expect('current_user_can')
-            ->with('manage_categories')
+            ->with('edit_term', 789)
             ->andReturn(true);
 
         Functions\when('wp_verify_nonce')->justReturn(true);
@@ -400,7 +400,7 @@ class RegistryTest extends \PHPUnit\Framework\TestCase
         $_POST['_wpnonce'] = 'garbage_nonce';
 
         Functions\expect('current_user_can')
-            ->with('manage_categories')
+            ->with('edit_term', 789)
             ->andReturn(true);
 
         Functions\when('wp_verify_nonce')->justReturn(false);
@@ -429,7 +429,7 @@ class RegistryTest extends \PHPUnit\Framework\TestCase
         $_POST['term_field'] = 'term_value';
 
         Functions\expect('current_user_can')
-            ->with('manage_categories')
+            ->with('edit_term', 789)
             ->andReturn(true);
 
         $captured = [];
@@ -516,7 +516,7 @@ class RegistryTest extends \PHPUnit\Framework\TestCase
         unset($_POST['_wpnonce']);
 
         Functions\expect('current_user_can')
-            ->with('manage_categories')
+            ->with('edit_term', 789)
             ->andReturn(true);
 
         Functions\expect('update_term_meta')->never();
@@ -699,10 +699,53 @@ class RegistryTest extends \PHPUnit\Framework\TestCase
         $this->assertTrue(true);
     }
 
+    /**
+     * L6 wiring: the Registry metabox save handler must be hooked to
+     * save_post, or the metabox renders a nonce + inputs that never persist.
+     */
+    public function testSavePostFieldsHookedToSavePost(): void
+    {
+        $registry = Registry::getInstance();
+        Functions\expect('add_action')->once()->with('save_post', [$registry, 'savePostFields']);
+        Functions\when('is_admin')->justReturn(true);
+
+        $registry->registerAll();
+    }
+
+    /**
+     * L6 behavior: with the metabox nonce present and valid, the field saves.
+     */
+    public function testSavePostFieldsPersistsWithValidNonce(): void
+    {
+        $registry = Registry::getInstance();
+        $field = Field::make('text', 'post_field', 'Post Field');
+        $registry->registerField('post', $field);
+
+        $_POST['post_field'] = 'post_value';
+        $_POST['hyperpress_post_fields_nonce'] = 'valid';
+
+        Functions\when('wp_verify_nonce')->justReturn(true);
+        Functions\when('current_user_can')->justReturn(true);
+
+        $meta_writes = [];
+        Functions\when('update_post_meta')->alias(function (...$args) use (&$meta_writes) {
+            $meta_writes[] = $args;
+
+            return true;
+        });
+
+        $registry->savePostFields(123);
+
+        $this->assertCount(1, $meta_writes);
+        $this->assertSame([123, 'post_field', 'post_value'], $meta_writes[0]);
+
+        unset($_POST['post_field'], $_POST['hyperpress_post_fields_nonce']);
+    }
+
     public function testSaveTermFieldsPermissionDenied()
     {
         $registry = Registry::getInstance();
-        Functions\expect('current_user_can')->with('manage_categories')->andReturn(false);
+        Functions\expect('current_user_can')->with('edit_term', 789)->andReturn(false);
         $registry->saveTermFields(789);
         $this->assertTrue(true);
     }

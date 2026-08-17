@@ -201,6 +201,71 @@ class ExportImportTest extends \PHPUnit\Framework\TestCase
         $this->assertArrayHasKey('new_key', $merged, 'New keys should be added');
     }
 
+    /**
+     * L3: imported values must pass registered Field sanitizers when the
+     * host provides fields via 'hyperfields/import/sanitize_fields'.
+     */
+    public function testImportOptionsSanitizesThroughProvidedFields(): void
+    {
+        $field = new class ('text', 'dangerous_key', 'Dangerous') extends \HyperFields\Field {
+            public function __construct(string $type, string $name, string $label)
+            {
+                parent::__construct($type, $name, $label);
+            }
+
+            public function sanitizeValue(mixed $value): mixed
+            {
+                return 'SANITIZED<' . (is_string($value) ? $value : json_encode($value));
+            }
+        };
+
+        // This suite binds apply_filters as a returnArg passthrough in the
+        // bootstrap; alias it per-tag so the sanitize_fields seam is live for
+        // this test while every other filter keeps passthrough semantics.
+        Functions\when('apply_filters')->alias(static function ($tag, $value, ...$args) use ($field) {
+            if ($tag === 'hyperfields/import/sanitize_fields' && ($args[0] ?? '') === 'my_option') {
+                return ['dangerous_key' => $field];
+            }
+
+            return $value;
+        });
+
+        $stored = null;
+        Functions\when('get_option')->justReturn([]);
+        Functions\when('update_option')->alias(function (string $name, $value) use (&$stored) {
+            $stored = $value;
+
+            return true;
+        });
+
+        $json = $this->makeExportJson(['my_option' => ['dangerous_key' => '<script>evil()</script>', 'other_key' => 'untouched']]);
+        $result = ExportImport::importOptions($json);
+
+        $this->assertTrue($result['success']);
+        $this->assertSame('SANITIZED<<script>evil()</script>', $stored['dangerous_key'], 'matching field key must run through the Field sanitizer');
+        $this->assertSame('untouched', $stored['other_key'], 'keys without a field pass through unchanged');
+    }
+
+    /**
+     * L3 default: with no fields provided (filter returns []), imported
+     * values pass through unchanged — backward compatibility.
+     */
+    public function testImportOptionsWithoutFieldsIsUnchanged(): void
+    {
+        $stored = null;
+        Functions\when('get_option')->justReturn([]);
+        Functions\when('update_option')->alias(function (string $name, $value) use (&$stored) {
+            $stored = $value;
+
+            return true;
+        });
+
+        $json = $this->makeExportJson(['my_option' => ['plain_key' => 'raw_value']]);
+        ExportImport::importOptions($json);
+
+        $this->assertSame('raw_value', $stored['plain_key']);
+    }
+
     public function testImportOptionsWhitelistBlocking(): void
     {
         Functions\when('get_option')->justReturn([]);

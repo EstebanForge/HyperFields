@@ -103,6 +103,7 @@ class ExportImportUI
             previewer: $previewer,
             importer: $importer,
             exportFormExtras: $exportFormExtras,
+            capability: $capability,
         );
 
         // Determine the hook suffix WordPress will assign to this page
@@ -147,6 +148,7 @@ class ExportImportUI
             previewer: $config->previewer,
             importer: $config->importer,
             exportFormExtras: $config->exportFormExtras,
+            capability: $config->capability,
         );
     }
 
@@ -259,7 +261,19 @@ class ExportImportUI
         ?callable $previewer = null,
         ?callable $importer = null,
         ?string $exportFormExtras = null,
+        string $capability = 'manage_options',
     ): string {
+        // L4: in-handler capability check. The submenu registration enforces
+        // the capability when registerPage() is used, but render() is public
+        // and documented for manual embedding; a host that wires it to a
+        // low-capability context must not get export/import behind a nonce
+        // alone. Fails closed: no capability, no page, and no POST handling.
+        if (!current_user_can($capability)) {
+            return '<div class="error"><p>'
+                . esc_html__('You do not have permission to access this page.', 'hyperfields')
+                . '</p></div>';
+        }
+
         if (TransferLogsUI::isEnabled() && TransferLogsUI::isLogsViewRequest()) {
             return TransferLogsUI::renderPage();
         }
