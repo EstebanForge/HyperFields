@@ -132,6 +132,25 @@ class FieldTest extends \PHPUnit\Framework\TestCase
         $this->assertEquals($options, $field->getOptions());
     }
 
+    public function testSelectSanitizeWithNumericStringKeys()
+    {
+        // PHP casts numeric-string array keys to int, so a strict in_array
+        // against the raw keys would never match the string values a form
+        // posts. Numeric-keyed selects must still sanitize and save.
+        $field = Field::make('select', 'htmx_version', 'HTMX Version');
+        $field->setOptions([
+            '2' => 'htmx 2.x (legacy, stable)',
+            '4' => 'htmx 4.x (recommended, new default)',
+        ]);
+
+        $this->assertSame('4', $field->sanitizeValue('4'));
+        $this->assertSame('2', $field->sanitizeValue('2'));
+        $this->assertSame('4', $field->sanitizeValue(4));
+
+        // Invalid input falls back to the first declared key.
+        $this->assertSame('2', $field->sanitizeValue('9'));
+    }
+
     public function testToArrayConversion()
     {
         $field = Field::make('text', 'test_field', 'Test Field');
