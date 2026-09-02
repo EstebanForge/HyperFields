@@ -333,11 +333,38 @@ class OptionsPageTest extends \PHPUnit\Framework\TestCase
             ->once()
             ->with('test_field', '', [$field, 'render'], 'hyperpress_options', 'test_section', $field->getArgs());
 
-        Functions\expect('add_action')
-            ->once()
-            ->with('update_option_hyperpress_options', [$this->page, 'onOptionSaved'], 10, 3);
-
+        // The update_option_{name} -> onOptionSaved wiring lives in
+        // register() now: it must fire on every context (see register()).
         $this->page->registerSettings();
+    }
+
+    public function testRegisterWiresAfterSaveHookForEveryContext()
+    {
+        // Ability writes persist option values on REST/CLI requests where
+        // admin_init never fires; the after_save re-emit must be wired by
+        // register() itself so after_save consumers (CacheInvalidator) run
+        // for those writes too.
+        $hook_args = [];
+        Functions\expect('get_option')
+            ->once()
+            ->with('hyperpress_options', [])
+            ->andReturn([]);
+        Functions\expect('doing_filter')
+            ->once()
+            ->with('admin_menu')
+            ->andReturn(false);
+        Functions\expect('add_action')
+            ->andReturnUsing(function (...$args) use (&$hook_args) {
+                $hook_args[] = $args;
+                return true;
+            });
+
+        $this->page->register();
+
+        $this->assertContains(
+            ['update_option_hyperpress_options', [$this->page, 'onOptionSaved'], 10, 3],
+            $hook_args
+        );
     }
 
     public function testSanitizeOptions()
