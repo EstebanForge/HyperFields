@@ -300,7 +300,7 @@ if (!$result['success']) {
 - No external dependencies (pure WordPress)
 - Library-only in this repository (no plugin entrypoint)
 
-## Abilities API module (1.7.0+)
+## Abilities API module (1.6.1+)
 
 `src/Abilities/AbilityRegistrar.php` registers the `hyperfields` category and three abilities over registered options pages: `hyperfields/list-option-pages` (inventory with per-field JSON Schema; `manage_options`), `hyperfields/get-option` and `hyperfields/update-option` (permission resolved per page from `OptionsPage::getCapability()` at execution time; unknown pages fail closed). Writes run through `OptionsPage::setFieldValue()`: the Settings-API save pipeline narrowed to one field (`wps_sanitize` -> `Field::sanitizeValue()` -> `wps_validate` -> `hyperfields/options_page/pre_save` -> `option_path` dual-write). Same-value writes are idempotent successes. The field inventory is request-scoped for pages with conditional sections: re-list after changing a dependency field.
 
