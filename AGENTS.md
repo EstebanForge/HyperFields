@@ -99,7 +99,7 @@ HyperFields::getOptions('option_name', []);
 **HyperFields\BlockFieldAdapter**: Adapter for Gutenberg block integration
 - Used by HyperPress for block field definitions
 
-**HyperFields\Field**: Base field class extended by specific field types
+**HyperFields\Field**: Base field class extended by specific field types. Fields carry editor-UI schema beyond storage: `setTab()` / `setSection()` group controls in editor sidebars, `setLive()` badges a control, and `setConditionalLogic(array)` canonicalizes its input through `ConditionalLogic::factory()` so every consumer reads the same `{relation, conditions, groups}` shape (AND within a group, OR across groups; empty logic = visible). `toArray()` ships `tab` / `section` / `live` and normalizes option maps to `[{value, label}]` lists — a 0-based sequential integer map and a scalar list are the same PHP value and both encode value=label; use string or non-sequential keys when stored values matter.
 
 **HyperFields\Container\***: Container classes for different storage types
 - `PostMetaContainer` - Post meta fields

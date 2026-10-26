@@ -72,6 +72,73 @@ class FieldUiMetaTest extends \PHPUnit\Framework\TestCase
         $this->assertFalse($field->toArray()['live']);
     }
 
+    public function testSetConditionalLogicCanonicalizesToGroupsShape()
+    {
+        $field = Field::make('select', 'layout', 'Layout')
+            ->setOptions(['boxed' => 'Boxed', 'full' => 'Full'])
+            ->setConditionalLogic([
+                ['field' => 'show_border', 'operator' => '=', 'value' => '1'],
+            ]);
+
+        $logic = $field->toArray()['conditional_logic'];
+
+        $this->assertSame([
+            'relation' => 'AND',
+            'conditions' => [['field' => 'show_border', 'operator' => '=', 'value' => '1']],
+            'groups' => [[['field' => 'show_border', 'operator' => '=', 'value' => '1']]],
+        ], $logic);
+    }
+
+    public function testSetConditionalLogicKeepsCanonicalInput()
+    {
+        $field = Field::make('text', 'a', 'A');
+
+        $field->setConditionalLogic([
+            'relation' => 'OR',
+            'conditions' => [
+                ['field' => 'a', 'operator' => '=', 'value' => '1'],
+            ],
+            'groups' => [
+                [['field' => 'a', 'operator' => '=', 'value' => '1']],
+                [['field' => 'b', 'operator' => '=', 'value' => '2']],
+            ],
+        ]);
+
+        $this->assertSame('OR', $field->toArray()['conditional_logic']['relation']);
+    }
+
+    public function testOptionsMapNormalizesToValueLabelList()
+    {
+        $field = Field::make('select', 'level', 'Level')
+            ->setOptions(['off' => 'Off', 'on' => 'On']);
+
+        $this->assertSame([
+            ['value' => 'off', 'label' => 'Off'],
+            ['value' => 'on', 'label' => 'On'],
+        ], $field->toArray()['options']);
+    }
+
+    public function testOptionsSparseIntMapNormalizesToValueLabelList()
+    {
+        $field = Field::make('select', 'level', 'Level')
+            ->setOptions([10 => 'Ten', 20 => 'Twenty']);
+
+        $this->assertSame([
+            ['value' => '10', 'label' => 'Ten'],
+            ['value' => '20', 'label' => 'Twenty'],
+        ], $field->toArray()['options']);
+    }
+
+    public function testOptionsScalarListStaysList()
+    {
+        // A 0-based sequential integer map and a scalar list are the same
+        // PHP value; both encode value=label by design.
+        $field = Field::make('select', 'tone', 'Tone')
+            ->setOptions(['Red', 'Green']);
+
+        $this->assertSame(['Red', 'Green'], $field->toArray()['options']);
+    }
+
     public function testFieldsWithoutUiMetaStayUnchanged()
     {
         $plain = Field::make('text', 'heading', 'Heading');
@@ -81,8 +148,8 @@ class FieldUiMetaTest extends \PHPUnit\Framework\TestCase
             ->setLive();
 
         $plainData = $plain->toArray();
-        $this->assertArrayNotHasKey('tab_value_changes_existing_keys', $plainData);
         $this->assertNull($plainData['tab']);
+        $this->assertNull($plainData['section']);
 
         $groupedData = $grouped->toArray();
         foreach ($plainData as $key => $value) {

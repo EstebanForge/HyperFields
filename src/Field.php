@@ -36,6 +36,25 @@ class Field
     protected array $args = [];
 
     /**
+     * JSON transport for options: keyed PHP maps encode as lists when the
+     * keys are sequential integers, which would lose the stored values.
+     * Maps become [{value,label}]; scalar lists keep value=label semantics.
+     */
+    private function normalizeOptions(array $options): array
+    {
+        if (array_is_list($options)) {
+            return $options;
+        }
+
+        $normalized = [];
+        foreach ($options as $value => $label) {
+            $normalized[] = ['value' => (string) $value, 'label' => (string) $label];
+        }
+
+        return $normalized;
+    }
+
+    /**
      * SetHtml.
      *
      * @return self
@@ -343,7 +362,7 @@ class Field
      */
     public function setConditionalLogic(array $conditional_logic): self
     {
-        $this->conditional_logic = $conditional_logic;
+        $this->conditional_logic = ConditionalLogic::factory($conditional_logic)->toArray();
 
         return $this;
     }
@@ -726,7 +745,7 @@ class Field
             'placeholder' => $this->placeholder,
             'required' => $this->required,
             'help' => $this->help,
-            'options' => $this->options,
+            'options' => $this->normalizeOptions($this->options),
             'validation' => $this->validation,
             'conditional_logic' => $this->conditional_logic,
             'tab' => $this->tab,

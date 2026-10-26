@@ -209,20 +209,14 @@ class FieldTest extends \PHPUnit\Framework\TestCase
         $field = Field::make('text', 'dependent_field', 'Dependent Field');
 
         $field->setConditionalLogic([
-            'show_when' => [
-                'field' => 'parent_field',
-                'operator' => 'equals',
-                'value' => 'show',
-            ],
+            ['field' => 'parent_field', 'operator' => '=', 'value' => 'show'],
         ]);
 
-        $this->assertEquals([
-            'show_when' => [
-                'field' => 'parent_field',
-                'operator' => 'equals',
-                'value' => 'show',
-            ],
-        ], $field->getConditionalLogic());
+        $logic = $field->getConditionalLogic();
+
+        $this->assertSame('AND', $logic['relation']);
+        $this->assertSame([['field' => 'parent_field', 'operator' => '=', 'value' => 'show']], $logic['conditions']);
+        $this->assertSame([['field' => 'parent_field', 'operator' => '=', 'value' => 'show']], $logic['groups'][0]);
     }
 
     public function testMultipleValues()
