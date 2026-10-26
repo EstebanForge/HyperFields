@@ -29,6 +29,9 @@ class Field
     private string $taxonomy = 'category';
     private bool $media_library = true;
     private array $map_options = [];
+    private ?string $tab = null;
+    private ?string $section = null;
+    private bool $live = false;
     private ?string $html_content = null;
     protected array $args = [];
 
@@ -52,6 +55,66 @@ class Field
     public function setHtmlContent(string $html): self
     {
         return $this->setHtml($html);
+    }
+
+    /**
+     * SetTab.
+     *
+     * @return self
+     */
+    public function setTab(string $tab): self
+    {
+        $this->tab = $tab;
+
+        return $this;
+    }
+
+    /**
+     * SetSection.
+     *
+     * @return self
+     */
+    public function setSection(string $section): self
+    {
+        $this->section = $section;
+
+        return $this;
+    }
+
+    /**
+     * SetLive.
+     *
+     * @return self
+     */
+    public function setLive(bool $live = true): self
+    {
+        $this->live = $live;
+
+        return $this;
+    }
+
+    /**
+     * GetTab.
+     */
+    public function getTab(): ?string
+    {
+        return $this->tab;
+    }
+
+    /**
+     * GetSection.
+     */
+    public function getSection(): ?string
+    {
+        return $this->section;
+    }
+
+    /**
+     * IsLive.
+     */
+    public function isLive(): bool
+    {
+        return $this->live;
     }
 
     public const VALID_TYPES = [
@@ -666,6 +729,9 @@ class Field
             'options' => $this->options,
             'validation' => $this->validation,
             'conditional_logic' => $this->conditional_logic,
+            'tab' => $this->tab,
+            'section' => $this->section,
+            'live' => $this->live,
             'context' => $this->context,
             'storage_type' => $this->storage_type,
             'multiple' => $this->multiple,
