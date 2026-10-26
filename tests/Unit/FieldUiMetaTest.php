@@ -92,4 +92,13 @@ class FieldUiMetaTest extends \PHPUnit\Framework\TestCase
             $this->assertArrayHasKey($key, $groupedData);
         }
     }
+
+    public function testMultiselectBlockAttributeIsArrayTyped(): void
+    {
+        $field = Field::make('multiselect', 'tags', 'Tags');
+
+        $attribute = (new \HyperFields\BlockFieldAdapter($field))->toBlockAttribute();
+
+        $this->assertSame('array', $attribute['type']);
+    }
 }
