@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.7.1] - 2026-10-28
+
+### Added
+- **Shorthand `hf-*` CSS classes and variables.** Renamed internal classes and CSS custom properties to `hf-*` while retaining full backward compatibility for `hyperpress-*`.
+- **Aliased nonces and form fields.** Admin form actions and security nonces now support canonical `hyperfields_*` alongside `hyperpress_*` legacy fallbacks.
+
 ## [1.7.0] - 2026-10-26
 
 ### Added
