@@ -35,12 +35,14 @@ final class AbilityRegistrarTest extends TestCase
         $hooks = [];
         Functions\when('add_filter')->alias(function ($hook, $cb, $priority = 10) use (&$hooks): bool {
             $hooks[$hook][$priority][] = $cb;
+
             return true;
         });
         Functions\when('apply_filters')->alias(function ($hook, $value, ...$args) use (&$hooks) {
             foreach ($hooks[$hook][10] ?? [] as $cb) {
                 $value = $cb($value, ...$args);
             }
+
             return $value;
         });
 
@@ -60,6 +62,7 @@ final class AbilityRegistrarTest extends TestCase
         });
         Functions\when('update_option')->alias(function ($name, $value) {
             $this->options[$name] = $value;
+
             return true;
         });
         Functions\when('current_user_can')->alias(static fn ($cap) => $cap === 'manage_options');

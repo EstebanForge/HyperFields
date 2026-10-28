@@ -207,7 +207,7 @@ class ExportImportTest extends \PHPUnit\Framework\TestCase
      */
     public function testImportOptionsSanitizesThroughProvidedFields(): void
     {
-        $field = new class ('text', 'dangerous_key', 'Dangerous') extends \HyperFields\Field {
+        $field = new class('text', 'dangerous_key', 'Dangerous') extends \HyperFields\Field {
             public function __construct(string $type, string $name, string $label)
             {
                 parent::__construct($type, $name, $label);

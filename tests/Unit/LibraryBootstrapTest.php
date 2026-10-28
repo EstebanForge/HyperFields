@@ -78,8 +78,8 @@ class LibraryBootstrapTest extends TestCase
             || defined('HYPERPRESS_PLUGIN_URL')
             || defined('HYPERPRESS_VERSION')
         ) {
-            $this->fail('Config already initialized or HYPERPRESS constants already defined in isolated process; ' .
-                'LibraryBootstrap::init() cannot be tested fresh. Check the autoload chain.');
+            $this->fail('Config already initialized or HYPERPRESS constants already defined in isolated process; '
+                . 'LibraryBootstrap::init() cannot be tested fresh. Check the autoload chain.');
         }
 
         $plugin_file = WP_PLUGIN_DIR . '/host-plugin/host-plugin.php';

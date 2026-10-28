@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace HyperFields\Tests\Unit;
 
+use Brain\Monkey;
 use Brain\Monkey\Functions;
 use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
 use PHPUnit\Framework\TestCase;
-use Brain\Monkey;
 
 /**
  * Characterization + regression tests for the association field template.
