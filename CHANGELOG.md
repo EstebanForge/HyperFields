@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.7.2] - 2026-10-28
+
+### Fixed
+- **Page-level fields on section-less options pages now render.** `OptionsPage::addField()` without any `addSection()` call stored the field but the render, Settings-API registration, and sanitize loops only iterated sections, so the form printed hidden inputs and a submit button and nothing else. Fields added directly to a page now fold into an implicit default section at `register()` time (same pattern as the WordPress core General/Writing/Reading pages: no section heading, no tab nav), and their defaults seed `option_values` like section fields do.
+- **Mixed usage warns instead of silently dropping.** When a page has both explicit sections and page-level fields, those page-level fields stay unrendered (historical behavior) and each one now triggers `_doing_it_wrong()` pointing at `addSection()` / `addSectionToTab()`.
+
 ## [1.7.1] - 2026-10-28
 
 ### Added

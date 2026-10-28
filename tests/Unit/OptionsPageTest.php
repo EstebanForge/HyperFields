@@ -214,11 +214,87 @@ class OptionsPageTest extends \PHPUnit\Framework\TestCase
             ->with('hyperpress_options', [])
             ->andReturn([]);
 
-        Functions\expect('add_action')->once()->with('admin_menu', \Mockery::type('callable'));
-        Functions\expect('add_action')->once()->with('admin_init', \Mockery::type('callable'));
-        Functions\expect('add_action')->once()->with('admin_enqueue_scripts', \Mockery::type('callable'));
+        Functions\expect('add_action')->once()->with('admin_menu', Mockery::type('callable'));
+        Functions\expect('add_action')->once()->with('admin_init', Mockery::type('callable'));
+        Functions\expect('add_action')->once()->with('admin_enqueue_scripts', Mockery::type('callable'));
 
         $this->page->register();
+    }
+
+    public function testRegisterNormalizesPageLevelFieldsIntoImplicitDefaultSection()
+    {
+        $field = Field::make('text', 'site_title', 'Site Title')->setDefault('My Site');
+        $this->page->addField($field);
+
+        Functions\expect('get_option')
+            ->once()
+            ->with('hyperpress_options', [])
+            ->andReturn([]);
+
+        Functions\expect('add_action')->times(4);
+
+        $this->page->register();
+
+        $reflection = new \ReflectionClass($this->page);
+
+        $fields = $reflection->getProperty('fields')->getValue($this->page);
+        $this->assertSame([], $fields, 'Page-level fields must move out of the page-level bag');
+
+        $sections = $reflection->getProperty('sections')->getValue($this->page);
+        $this->assertArrayHasKey('_hf_default', $sections);
+        $this->assertSame($field, $sections['_hf_default']->getFields()['site_title']);
+
+        $default_values = $reflection->getProperty('default_values')->getValue($this->page);
+        $this->assertSame('My Site', $default_values['site_title']);
+    }
+
+    public function testRenderPagePrintsImplicitDefaultSectionFields()
+    {
+        $this->page->addField(Field::make('text', 'site_title', 'Site Title'));
+
+        Functions\expect('get_option')
+            ->once()
+            ->with('hyperpress_options', [])
+            ->andReturn([]);
+        Functions\expect('add_action')->times(4);
+        $this->page->register();
+
+        Functions\when('do_settings_fields')->alias(function ($page, $section_id) {
+            echo 'FIELDS:' . $section_id;
+        });
+
+        ob_start();
+        $this->page->renderPage();
+        $output = ob_get_clean();
+
+        $this->assertStringContainsString('FIELDS:_hf_default', $output);
+        // Implicit section has no title: no stray empty heading, no tab nav.
+        $this->assertStringNotContainsString('<h2></h2>', $output);
+        $this->assertStringNotContainsString('nav-tab-wrapper', $output);
+    }
+
+    public function testRegisterDoingItWrongWhenMixingPageFieldsWithSections()
+    {
+        $section = new OptionsSection('section1', 'Section 1');
+        $this->page->addSectionObject($section);
+        $this->page->addField(Field::make('text', 'orphan', 'Orphan'));
+
+        Functions\expect('_doing_it_wrong')->once();
+
+        Functions\expect('get_option')
+            ->once()
+            ->with('hyperpress_options', [])
+            ->andReturn([]);
+
+        Functions\expect('add_action')->times(4);
+
+        $this->page->register();
+
+        $reflection = new \ReflectionClass($this->page);
+        $fields = $reflection->getProperty('fields')->getValue($this->page);
+        $this->assertArrayHasKey('orphan', $fields, 'Mixed-usage page-level fields stay unrendered, as before');
+        $sections = $reflection->getProperty('sections')->getValue($this->page);
+        $this->assertArrayNotHasKey('_hf_default', $sections);
     }
 
     public function testLoadOptions()
@@ -356,6 +432,7 @@ class OptionsPageTest extends \PHPUnit\Framework\TestCase
         Functions\expect('add_action')
             ->andReturnUsing(function (...$args) use (&$hook_args) {
                 $hook_args[] = $args;
+
                 return true;
             });
 
@@ -1012,6 +1089,7 @@ class OptionsPageTest extends \PHPUnit\Framework\TestCase
             if ($name === 'hyperpress_options') {
                 return ['test_field' => 'legacy_val'];
             }
+
             return $default;
         });
 
