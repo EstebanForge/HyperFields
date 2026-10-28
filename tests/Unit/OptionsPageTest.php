@@ -320,18 +320,18 @@ class OptionsPageTest extends \PHPUnit\Framework\TestCase
         Functions\expect('register_setting')
             ->once()
             ->with(
-                'hyperpress_options',
-                'hyperpress_options',
+                'hyperfields_options',
+                'hyperfields_options',
                 ['sanitize_callback' => [$this->page, 'sanitizeOptions']]
             );
 
         Functions\expect('add_settings_section')
             ->once()
-            ->with('test_section', '', '__return_false', 'hyperpress_options');
+            ->with('test_section', '', '__return_false', 'hyperfields_options');
 
         Functions\expect('add_settings_field')
             ->once()
-            ->with('test_field', '', [$field, 'render'], 'hyperpress_options', 'test_section', $field->getArgs());
+            ->with('test_field', '', [$field, 'render'], 'hyperfields_options', 'test_section', $field->getArgs());
 
         // The update_option_{name} -> onOptionSaved wiring lives in
         // register() now: it must fire on every context (see register()).
@@ -347,8 +347,8 @@ class OptionsPageTest extends \PHPUnit\Framework\TestCase
         $hook_args = [];
         Functions\expect('get_option')
             ->once()
-            ->with('hyperpress_options', [])
-            ->andReturn([]);
+            ->with('hyperfields_options', null)
+            ->andReturn(null);
         Functions\expect('doing_filter')
             ->once()
             ->with('admin_menu')
@@ -362,7 +362,7 @@ class OptionsPageTest extends \PHPUnit\Framework\TestCase
         $this->page->register();
 
         $this->assertContains(
-            ['update_option_hyperpress_options', [$this->page, 'onOptionSaved'], 10, 3],
+            ['update_option_hyperfields_options', [$this->page, 'onOptionSaved'], 10, 3],
             $hook_args
         );
     }
@@ -522,14 +522,14 @@ class OptionsPageTest extends \PHPUnit\Framework\TestCase
         Functions\expect('register_setting')
             ->once()
             ->with(
-                'hyperpress_options',
-                'hyperpress_options',
+                'hyperfields_options',
+                'hyperfields_options',
                 ['sanitize_callback' => [$this->page, 'sanitizeOptions']]
             );
 
         Functions\expect('add_settings_section')
             ->once()
-            ->with('empty_section', '', '__return_false', 'hyperpress_options');
+            ->with('empty_section', '', '__return_false', 'hyperfields_options');
 
         Functions\expect('add_settings_field')->never(); // Should not be called if section has no fields
 
@@ -548,8 +548,8 @@ class OptionsPageTest extends \PHPUnit\Framework\TestCase
         Functions\expect('register_setting')
             ->once()
             ->with(
-                'hyperpress_options',
-                'hyperpress_options',
+                'hyperfields_options',
+                'hyperfields_options',
                 ['sanitize_callback' => [$this->page, 'sanitizeOptions']]
             );
 
@@ -997,5 +997,48 @@ class OptionsPageTest extends \PHPUnit\Framework\TestCase
 
         // Should not include React root container
         $this->assertStringNotContainsString('id="hyperpress-react-root"', $output);
+    }
+
+    public function testLoadOptionsFallsBackToHyperpressOptions()
+    {
+        $section = $this->page->addSection('test_section', 'Test Section');
+        $field = Field::make('text', 'test_field', 'Test Field');
+        $section->addField($field);
+
+        Functions\when('get_option')->alias(function ($name, $default = false) {
+            if ($name === 'hyperfields_options') {
+                return null;
+            }
+            if ($name === 'hyperpress_options') {
+                return ['test_field' => 'legacy_val'];
+            }
+            return $default;
+        });
+
+        $reflection = new \ReflectionClass($this->page);
+        $loadOptions = $reflection->getMethod('loadOptions');
+        $loadOptions->invoke($this->page);
+
+        $optionValuesProp = $reflection->getProperty('option_values');
+        $values = $optionValuesProp->getValue($this->page);
+        $this->assertSame('legacy_val', $values['test_field']);
+    }
+
+    public function testLegacyPostTabAndSectionFallback()
+    {
+        $this->page->addSection('legacy_tab', 'Legacy Tab');
+        $this->page->addSection('legacy_sec', 'Legacy Section');
+
+        $_POST = [
+            'hyperpress_active_tab' => 'legacy_tab',
+            'hyperpress_active_section' => 'legacy_sec',
+        ];
+
+        $reflection = new \ReflectionClass($this->page);
+        $getActiveTab = $reflection->getMethod('getActiveTab');
+        $getActiveSection = $reflection->getMethod('getActiveSection');
+
+        $this->assertSame('legacy_tab', $getActiveTab->invoke($this->page));
+        $this->assertSame('legacy_sec', $getActiveSection->invoke($this->page, 'legacy_tab'));
     }
 }

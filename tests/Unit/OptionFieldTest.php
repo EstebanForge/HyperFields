@@ -57,7 +57,7 @@ class OptionFieldTest extends \PHPUnit\Framework\TestCase
     {
         $field = OptionField::forOption('test_option', 'text', 'field_name', 'Field Label');
 
-        $this->assertEquals('hyperpress_fields', $field->getOptionGroup());
+        $this->assertEquals('hyperfields_fields', $field->getOptionGroup());
     }
 
     public function testGetValueWithArrayStorage()

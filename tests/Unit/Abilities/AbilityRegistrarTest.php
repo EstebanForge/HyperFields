@@ -159,7 +159,7 @@ final class AbilityRegistrarTest extends TestCase
 
         $this->assertCount(1, $pages);
         $this->assertSame('test-page', $pages[0]['page']);
-        $this->assertSame('hyperpress_options', $pages[0]['option_group']);
+        $this->assertSame('hyperfields_options', $pages[0]['option_group']);
         $this->assertSame('manage_options', $pages[0]['capability']);
 
         $this->assertCount(1, $pages[0]['fields']);
@@ -199,7 +199,7 @@ final class AbilityRegistrarTest extends TestCase
         ]);
 
         $this->assertTrue($result['success']);
-        $this->assertSame('writer@example.com', $this->options['hyperpress_options']['contact_email']);
+        $this->assertSame('writer@example.com', $this->options['hyperfields_options']['contact_email']);
         $this->assertSame('default@example.com', $result['field_default']);
     }
 

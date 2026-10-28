@@ -93,7 +93,7 @@ final class OptionsPageFieldValueTest extends TestCase
         $page = $this->makePage();
 
         $this->assertTrue($page->setFieldValue('contact_email', 'writer@example.com'));
-        $this->assertSame('writer@example.com', $this->options['hyperpress_options']['contact_email']);
+        $this->assertSame('writer@example.com', $this->options['hyperfields_options']['contact_email']);
     }
 
     public function test_set_field_value_is_idempotent_for_same_value(): void
@@ -139,7 +139,7 @@ final class OptionsPageFieldValueTest extends TestCase
         ]);
 
         $this->assertTrue($page->setFieldValue('contact_email', 'original@example.com'));
-        $this->assertSame('vetoed@example.com', $this->options['hyperpress_options']['contact_email']);
+        $this->assertSame('vetoed@example.com', $this->options['hyperfields_options']['contact_email']);
     }
 
     public function test_find_field_and_all_fields_cover_sections(): void
