@@ -45,10 +45,19 @@ composer install --no-dev --optimize-autoloader  # Production install
 composer update --no-dev --optimize-autoloader   # Production update
 ```
 
-### Version Management
-- Update version in `composer.json` (canonical source)
-- `src/Config.php` `VERSION` constant mirrors it for the PHP side — run `composer version-bump` to update both atomically
-- Update `CHANGELOG.md` with changes
+### Version Management & Release Protocol
+1. Run tests: `composer test`
+2. Bump version: `bash scripts/version-bump.sh --patch` (or `--minor`/`--major`). This synchronizes `composer.json`, `package.json`, and `src/Config.php`.
+3. Update `CHANGELOG.md` with `## [X.Y.Z] - YYYY-MM-DD`.
+4. Build production assets & strip dev dependencies: `composer run-script production` (or `npm run build && composer install --no-dev --optimize-autoloader`).
+   * **Important**: The pre-push hook (`.git/hooks/pre-push`) blocks pushing tags if dev dependencies exist in `vendor/`.
+5. Stage and commit:
+   `git add CHANGELOG.md composer.json package.json src/Config.php assets/`
+   `git commit -m "chore(release): bump version to X.Y.Z"`
+6. Push and tag:
+   `git push origin main && git tag -a X.Y.Z -m "Release X.Y.Z" && git push origin X.Y.Z`
+7. Restore dev dependencies for development: `composer install`
+8. Verify on Packagist: `curl -s "https://repo.packagist.org/p2/estebanforge/hyperfields.json" | grep -o '"version":"[^"]*"' | head -n 5`
 
 ## Architecture & Key Components
 
