@@ -501,7 +501,7 @@ class OptionsPage
                         esc_html__('OptionsPage field "%s" was added directly to a page that already has sections and will not be rendered. Add it to a section via addSection() or addSectionToTab() instead.', 'hyperfields'),
                         $field_name
                     ),
-                    '1.7.2'
+                    '1.7.3'
                 );
             }
 
@@ -944,12 +944,10 @@ class OptionsPage
      */
     private function renderTabs(): void
     {
-        if (empty($this->tabs)) {
-            return;
-        }
-
         $visible_tabs = array_filter($this->tabs, static fn (array $tab): bool => $tab['title'] !== '');
-        if ($visible_tabs === []) {
+        // A single visible tab is a self-link: the section heading below already
+        // names it, so the nav (and its mobile select morph) would add nothing.
+        if (count($visible_tabs) <= 1) {
             return;
         }
 

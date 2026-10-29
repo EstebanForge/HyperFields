@@ -776,10 +776,53 @@ class OptionsPageTest extends \PHPUnit\Framework\TestCase
 
         $this->assertStringContainsString('wrap', $output);
         $this->assertStringContainsString('Test Page', $output);
-        $this->assertStringContainsString('nav-tab-wrapper', $output);
+        $this->assertStringNotContainsString('nav-tab-wrapper', $output); // A lone section needs no nav: the section heading already names it
         $this->assertStringContainsString('Test Section', $output);
         $this->assertStringContainsString('Test Description', $output);
         $this->assertStringContainsString('<button>Custom Submit</button>', $output); // Assert custom string
+    }
+
+    public function testRenderPageMultipleSectionsRendersNav()
+    {
+        Functions\when('esc_attr')->returnArg();
+        $this->page->addSection('test_section', 'Test Section', 'Test Description');
+        $this->page->addSection('second_section', 'Second Section');
+
+        Functions\when('settings_fields')->justReturn('');
+        Functions\when('do_settings_fields')->justReturn('');
+        Functions\when('submit_button')->alias(function () {
+            echo '<button>Custom Submit</button>';
+        });
+
+        ob_start();
+        $this->page->renderPage();
+        $output = ob_get_clean();
+
+        $this->assertStringContainsString('nav-tab-wrapper', $output);
+        $this->assertStringContainsString('Test Section', $output);
+        $this->assertStringContainsString('Second Section', $output);
+    }
+
+    public function testRenderPageSingleTabMultipleSectionsHasNoNav()
+    {
+        Functions\when('esc_attr')->returnArg();
+        $this->page->addTab('main', 'Main Tab');
+        $this->page->addSectionToTab('main', 'first_section', 'First Section');
+        $this->page->addSectionToTab('main', 'second_section', 'Second Section');
+
+        Functions\when('settings_fields')->justReturn('');
+        Functions\when('do_settings_fields')->justReturn('');
+        Functions\when('submit_button')->alias(function () {
+            echo '<button>Custom Submit</button>';
+        });
+
+        ob_start();
+        $this->page->renderPage();
+        $output = ob_get_clean();
+
+        $this->assertStringNotContainsString('nav-tab-wrapper', $output); // Sections per tab must not inflate the tab count
+        $this->assertStringContainsString('First Section', $output);
+        $this->assertStringContainsString('Second Section', $output);
     }
 
     public function testRenderPageWithFooter()

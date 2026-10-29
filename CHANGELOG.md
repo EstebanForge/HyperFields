@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.7.3] - 2026-10-29
+
+### Fixed
+- **Single-section options pages no longer render a one-item tab nav.** `OptionsPage::renderTabs()` skipped the nav only when zero tabs were registered, so a page with one section got a nav tab linking to the page it is already on. The nav now renders only when two or more titled tabs exist; the section heading below already names a lone section. Matches WordPress core, where settings pages with a single group show no nav.
+
 ## [1.7.2] - 2026-10-28
 
 ### Fixed
