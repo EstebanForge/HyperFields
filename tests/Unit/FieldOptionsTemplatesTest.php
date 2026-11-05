@@ -29,6 +29,7 @@ final class FieldOptionsTemplatesTest extends TestCase
         Functions\when('esc_html_e')->returnArg();
         Functions\when('esc_attr_e')->returnArg();
         Functions\when('wp_kses_post')->returnArg();
+        Functions\when('esc_url')->returnArg();
         Functions\when('checked')->alias(static function ($checked, $current = true, $display = true): string {
             $result = ((string) $checked === (string) $current) ? ' checked=\'checked\'' : '';
             if ($display) {
@@ -123,6 +124,44 @@ final class FieldOptionsTemplatesTest extends TestCase
         $this->assertStringContainsString('value="hello"', $html);
         $this->assertStringContainsString('data-value="hello"', $html);
         $this->assertStringContainsString('selected=\'selected\'', $html);
+        $this->assertStringNotContainsString('Array', $html);
+    }
+
+    public function testRadioImageRendersNormalizedValueLabelOptions(): void
+    {
+        $html = $this->render([
+            'type' => 'radio_image',
+            'name' => 'layout',
+            'name_attr' => 'settings[layout]',
+            'options' => [
+                ['value' => 'grid', 'label' => 'https://example.com/grid.png'],
+                ['value' => 'list', 'label' => 'https://example.com/list.png'],
+            ],
+            'value' => 'grid',
+        ], 'field-radio-image');
+
+        $this->assertStringContainsString('https://example.com/grid.png', $html);
+        $this->assertStringContainsString('value="grid"', $html);
+        $this->assertStringContainsString('checked=\'checked\'', $html);
+        $this->assertStringNotContainsString('Array', $html);
+    }
+
+    public function testRadioImageStillRendersRawAssocOptions(): void
+    {
+        $html = $this->render([
+            'type' => 'radio_image',
+            'name' => 'layout',
+            'name_attr' => 'settings[layout]',
+            'options' => [
+                'grid' => 'https://example.com/grid.png',
+                'list' => 'https://example.com/list.png',
+            ],
+            'value' => 'grid',
+        ], 'field-radio-image');
+
+        $this->assertStringContainsString('https://example.com/grid.png', $html);
+        $this->assertStringContainsString('value="grid"', $html);
+        $this->assertStringContainsString('checked=\'checked\'', $html);
         $this->assertStringNotContainsString('Array', $html);
     }
 
