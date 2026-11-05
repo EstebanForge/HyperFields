@@ -31,11 +31,19 @@ final class FieldOptionsTemplatesTest extends TestCase
         Functions\when('wp_kses_post')->returnArg();
         Functions\when('checked')->alias(static function ($checked, $current = true, $display = true): string {
             $result = ((string) $checked === (string) $current) ? ' checked=\'checked\'' : '';
-            return $display ? $result : $result;
+            if ($display) {
+                echo $result;
+            }
+
+            return $result;
         });
         Functions\when('selected')->alias(static function ($selected, $current = true, $display = true): string {
             $result = ((string) $selected === (string) $current) ? ' selected=\'selected\'' : '';
-            return $display ? $result : $result;
+            if ($display) {
+                echo $result;
+            }
+
+            return $result;
         });
         Functions\when('__')->returnArg();
         Functions\when('_e')->returnArg();
@@ -78,6 +86,8 @@ final class FieldOptionsTemplatesTest extends TestCase
 
         $this->assertStringContainsString('Daily', $html);
         $this->assertStringContainsString('Weekly', $html);
+        $this->assertStringContainsString('value="weekly"', $html);
+        $this->assertStringContainsString('selected=\'selected\'', $html);
         $this->assertStringNotContainsString('Array', $html);
     }
 
@@ -110,6 +120,9 @@ final class FieldOptionsTemplatesTest extends TestCase
 
         $this->assertStringContainsString('Hello Dolly', $html);
         $this->assertStringContainsString('Akismet', $html);
+        $this->assertStringContainsString('value="hello"', $html);
+        $this->assertStringContainsString('data-value="hello"', $html);
+        $this->assertStringContainsString('selected=\'selected\'', $html);
         $this->assertStringNotContainsString('Array', $html);
     }
 
@@ -128,6 +141,96 @@ final class FieldOptionsTemplatesTest extends TestCase
 
         $this->assertStringContainsString('Daily', $html);
         $this->assertStringContainsString('Weekly', $html);
+        $this->assertStringContainsString('value="daily"', $html);
+        $this->assertStringContainsString('checked=\'checked\'', $html);
+        $this->assertStringNotContainsString('Array', $html);
+    }
+
+    public function testMultiselectStillRendersRawAssocOptions(): void
+    {
+        $html = $this->render([
+            'type' => 'multiselect',
+            'name' => 'blocked',
+            'name_attr' => 'settings[blocked]',
+            'options' => ['hello' => 'Hello Dolly', 'akismet' => 'Akismet'],
+            'value' => ['hello'],
+        ], 'field-multiselect');
+
+        $this->assertStringContainsString('value="hello"', $html);
+        $this->assertStringContainsString('data-value="hello"', $html);
+        $this->assertStringContainsString('selected=\'selected\'', $html);
+        $this->assertStringNotContainsString('Array', $html);
+    }
+
+    public function testRadioStillRendersRawAssocOptions(): void
+    {
+        $html = $this->render([
+            'type' => 'radio',
+            'name' => 'freq',
+            'name_attr' => 'settings[freq]',
+            'options' => ['daily' => 'Daily', 'weekly' => 'Weekly'],
+            'value' => 'daily',
+        ], 'field-radio');
+
+        $this->assertStringContainsString('value="daily"', $html);
+        $this->assertStringContainsString('checked=\'checked\'', $html);
+        $this->assertStringNotContainsString('Array', $html);
+    }
+
+    public function testGenericInputRendersNormalizedRadioOptions(): void
+    {
+        $html = $this->render([
+            'type' => 'radio',
+            'name' => 'freq',
+            'name_attr' => 'settings[freq]',
+            'options' => [
+                ['value' => 'daily', 'label' => 'Daily'],
+                ['value' => 'weekly', 'label' => 'Weekly'],
+            ],
+            'value' => 'daily',
+        ], 'field-input');
+
+        $this->assertStringContainsString('value="daily"', $html);
+        $this->assertStringContainsString('checked=\'checked\'', $html);
+        $this->assertStringContainsString('Daily', $html);
+        $this->assertStringNotContainsString('Array', $html);
+    }
+
+    public function testGenericInputRendersNormalizedSetOptions(): void
+    {
+        $html = $this->render([
+            'type' => 'set',
+            'name' => 'roles',
+            'name_attr' => 'settings[roles]',
+            'options' => [
+                ['value' => 'editor', 'label' => 'Editor'],
+                ['value' => 'author', 'label' => 'Author'],
+            ],
+            'value' => ['editor'],
+        ], 'field-input');
+
+        $this->assertStringContainsString('value="editor"', $html);
+        $this->assertStringContainsString('checked=\'checked\'', $html);
+        $this->assertStringContainsString('Editor', $html);
+        $this->assertStringNotContainsString('Array', $html);
+    }
+
+    public function testSetTemplateRendersNormalizedOptions(): void
+    {
+        $html = $this->render([
+            'type' => 'set',
+            'name' => 'roles',
+            'name_attr' => 'settings[roles]',
+            'options' => [
+                ['value' => 'editor', 'label' => 'Editor'],
+                ['value' => 'author', 'label' => 'Author'],
+            ],
+            'value' => ['editor'],
+        ], 'field-set');
+
+        $this->assertStringContainsString('value="editor"', $html);
+        $this->assertStringContainsString('checked=\'checked\'', $html);
+        $this->assertStringContainsString('Editor', $html);
         $this->assertStringNotContainsString('Array', $html);
     }
 }

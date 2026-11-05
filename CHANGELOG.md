@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.7.4] - 2026-11-04
+
+### Fixed
+- **Select, multiselect, radio, and set fields now render normalized option lists correctly.** `Field::toArray()` converts associative option maps to `{value, label}` lists, but their templates treated each normalized option as a raw label and displayed `Array`. The templates now support both normalized lists and raw associative maps, preserving option values and labels while keeping `Field::toArray()` as the single normalization point.
+
 ## [1.7.3] - 2026-10-29
 
 ### Fixed
