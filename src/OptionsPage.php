@@ -501,7 +501,7 @@ class OptionsPage
                         esc_html__('OptionsPage field "%s" was added directly to a page that already has sections and will not be rendered. Add it to a section via addSection() or addSectionToTab() instead.', 'hyperfields'),
                         $field_name
                     ),
-                    '1.7.3'
+                    '1.7.4'
                 );
             }
 
